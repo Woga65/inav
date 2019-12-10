@@ -140,7 +140,6 @@ static EXTENDED_FASTRAM float dBoostMaxAtAlleceleration;
 static EXTENDED_FASTRAM uint16_t yawPLimit;
 static EXTENDED_FASTRAM uint8_t yawLpfHz;
 
-=======
 // sibi
 PG_REGISTER_WITH_RESET_TEMPLATE(pidAdjust_t, pidAdjust, PG_PID_ADJUST, 0);
 
