@@ -157,11 +157,11 @@
 
 #define SENSORS_SET (SENSOR_ACC | SENSOR_BARO)
 
-//#define USE_LED_STRIP
-//#define WS2811_PIN                      PA15
-//#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_ST0_HANDLER
-//#define WS2811_DMA_STREAM               DMA1_Stream0
-//#define WS2811_DMA_CHANNEL              DMA_Channel_2
+#define USE_LED_STRIP
+#define WS2811_PIN                      PA15
+#define WS2811_DMA_HANDLER_IDENTIFER    DMA1_ST0_HANDLER
+#define WS2811_DMA_STREAM               DMA1_Stream0
+#define WS2811_DMA_CHANNEL              DMA_Channel_2
 
 #define DEFAULT_FEATURES                (FEATURE_TX_PROF_SEL | FEATURE_BLACKBOX | FEATURE_VBAT | FEATURE_OSD | FEATURE_CURRENT_METER | FEATURE_SOFTSERIAL | FEATURE_TELEMETRY)
 #define DEFAULT_RX_TYPE                 RX_TYPE_SERIAL
