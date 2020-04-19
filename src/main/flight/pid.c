@@ -136,8 +136,16 @@ static EXTENDED_FASTRAM float dBoostFactor;
 static EXTENDED_FASTRAM float dBoostMaxAtAlleceleration;
 #endif
 
+
 static EXTENDED_FASTRAM uint16_t yawPLimit;
 static EXTENDED_FASTRAM uint8_t yawLpfHz;
+
+// sibi
+PG_REGISTER_WITH_RESET_TEMPLATE(pidAdjust_t, pidAdjust, PG_PID_ADJUST, 0);
+
+PG_RESET_TEMPLATE(pidAdjust_t, pidAdjust,
+    .pid_adjust_aux_channel = 0
+);
 
 PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 10);
 
@@ -246,8 +254,19 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         .antigravityCutoff = ANTI_GRAVITY_THROTTLE_FILTER_CUTOFF,
 );
 
+// sibi
+static EXTENDED_FASTRAM uint8_t pidAdjustmentChannel = 0;
+static EXTENDED_FASTRAM float pidAdjustmentFactor = 1;
+
 void pidInit(void)
 {
+    //sibi
+    pidAdjustmentFactor = 1;
+    pidAdjustmentChannel = pidAdjust()->pid_adjust_aux_channel;
+    if (pidAdjustmentChannel) {
+        pidAdjustmentChannel += NON_AUX_CHANNEL_COUNT - 1;
+    }
+
     pidResetTPAFilter();
 
     // Calculate max overall tilt (max pitch + max roll combined) as a limit to heading hold
@@ -707,8 +726,25 @@ static float applyDBoost(pidState_t *pidState, flight_dynamics_index_t axis, flo
 
 static void FAST_CODE pidApplyMulticopterRateController(pidState_t *pidState, flight_dynamics_index_t axis, float dT)
 {
+    // sibi
+    if (pidAdjustmentChannel) {
+        pidAdjustmentFactor = (scaleRangef((float)rxGetChannelValue(pidAdjustmentChannel), PWM_RANGE_MIN, PWM_RANGE_MAX, 2.0f, 0.0f));
+    }
+
     const float rateError = pidState->rateTarget - pidState->gyroRate;
-    const float newPTerm = pTermProcess(pidState, axis, rateError, dT);
+
+    // Calculate new P-term
+    // sibi
+    float newPTerm = pTermProcess(pidState, axis, rateError, dT) * pidAdjustmentFactor;
+    // Constrain YAW by yaw_p_limit value if not servo driven (in that case servo limits apply)
+    if (axis == FD_YAW && (getMotorCount() >= 4 && pidProfile()->yaw_p_limit)) {
+        newPTerm = constrain(newPTerm, -pidProfile()->yaw_p_limit, pidProfile()->yaw_p_limit);
+    }
+
+    // Additional P-term LPF on YAW axis
+    if (axis == FD_YAW && pidProfile()->yaw_lpf_hz) {
+        newPTerm = pt1FilterApply4(&pidState->ptermLpfState, newPTerm, pidProfile()->yaw_lpf_hz, dT);
+    }
 
     // Calculate new D-term
     float newDTerm;
@@ -733,7 +769,8 @@ static void FAST_CODE pidApplyMulticopterRateController(pidState_t *pidState, fl
         newDTerm = firFilterApply(&pidState->gyroRateFilter);
 
         // Calculate derivative
-        newDTerm =  newDTerm * (pidState->kD / dT) * applyDBoost(pidState, axis, dT);
+        // sibi
+        newDTerm =  newDTerm * (pidState->kD / dT * pidAdjustmentFactor) * applyDBoost(pidState, axis, dT);
 
         // Additionally constrain D
         newDTerm = constrainf(newDTerm, -300.0f, 300.0f);
@@ -741,6 +778,7 @@ static void FAST_CODE pidApplyMulticopterRateController(pidState_t *pidState, fl
 
     // TODO: Get feedback from mixer on available correction range for each axis
     const float newOutput = newPTerm + newDTerm + pidState->errorGyroIf;
+    //newPTerm + newDTerm + newFFTerm + pidState->errorGyroIf
     const float newOutputLimited = constrainf(newOutput, -pidProfile()->pidSumLimit, +pidProfile()->pidSumLimit);
 
     // Prevent strong Iterm accumulation during stick inputs
