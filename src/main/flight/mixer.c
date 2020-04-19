@@ -80,7 +80,8 @@ PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
     .hasFlaps = false,
     .appliedMixerPreset = -1, //This flag is not available in CLI and used by Configurator only
     .fwMinThrottleDownPitchAngle = 0,
-    .pwmOutputsReversed = 0   // sibi
+    .pwmOutputsReversed = 0,  // sibi
+    .auxThrottleChannel = 0   // sibi
 );
 
 #ifdef BRUSHED_MOTORS

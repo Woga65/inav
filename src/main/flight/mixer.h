@@ -70,6 +70,7 @@ typedef struct mixerConfig_s {
     int16_t appliedMixerPreset;
     uint16_t fwMinThrottleDownPitchAngle;
     uint16_t pwmOutputsReversed;             // sibi
+    uint8_t auxThrottleChannel;              // sibi
 } mixerConfig_t;
 
 PG_DECLARE(mixerConfig_t, mixerConfig);

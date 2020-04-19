@@ -34,7 +34,11 @@
 #define LED0                    PB12
 
 // Beeper
+#if defined(OMNIBUSF4NANOV7_PC5)
+#define BEEPER                  PC5
+#else
 #define BEEPER                  PB10
+#endif
 #define BEEPER_INVERTED
 
 // I2C

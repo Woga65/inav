@@ -778,6 +778,7 @@ static void FAST_CODE pidApplyMulticopterRateController(pidState_t *pidState, fl
 
     // TODO: Get feedback from mixer on available correction range for each axis
     const float newOutput = newPTerm + newDTerm + pidState->errorGyroIf;
+    //newPTerm + newDTerm + newFFTerm + pidState->errorGyroIf
     const float newOutputLimited = constrainf(newOutput, -pidProfile()->pidSumLimit, +pidProfile()->pidSumLimit);
 
     // Prevent strong Iterm accumulation during stick inputs

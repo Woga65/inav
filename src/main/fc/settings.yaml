@@ -711,6 +711,10 @@ groups:
         field: pwmOutputsReversed
         min: 0
         max: UINT16_MAX
+      - name: throttle_to_aux_channel
+        field: auxThrottleChannel
+        min: 0
+        max: MAX_AUX_CHANNEL_COUNT
 
   - name: PG_MOTOR_3D_CONFIG
     type: flight3DConfig_t
