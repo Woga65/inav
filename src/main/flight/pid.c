@@ -109,6 +109,10 @@ static EXTENDED_FASTRAM pt1Filter_t fixedWingTpaFilter;
 STATIC_FASTRAM bool pidGainsUpdateRequired;
 FASTRAM int16_t axisPID[FLIGHT_DYNAMICS_INDEX_COUNT];
 
+// sibi Gyro sensitivity channel for collective pitch
+static EXTENDED_FASTRAM uint8_t pidAdjustmentChannel = 0;
+static EXTENDED_FASTRAM float pidAdjustmentFactor = 1;
+
 #ifdef USE_BLACKBOX
 int32_t axisPID_P[FLIGHT_DYNAMICS_INDEX_COUNT], axisPID_I[FLIGHT_DYNAMICS_INDEX_COUNT], axisPID_D[FLIGHT_DYNAMICS_INDEX_COUNT], axisPID_Setpoint[FLIGHT_DYNAMICS_INDEX_COUNT];
 #endif
@@ -1039,10 +1043,6 @@ pidType_e pidIndexGetType(pidIndex_e pidIndex)
     }
     return PID_TYPE_PID;
 }
-
-// sibi
-static EXTENDED_FASTRAM uint8_t pidAdjustmentChannel = 0;
-static EXTENDED_FASTRAM float pidAdjustmentFactor = 1;
 
 void pidInit(void)
 {
