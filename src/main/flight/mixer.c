@@ -281,7 +281,7 @@ void FAST_CODE NOINLINE writeMotors(void)
                 if (motor[i] == motorConfig()->mincommand) {
                     motorValue = motorConfig()->maxthrottle;
                 } else {
-                    motorValue = (motorConfig()->maxthrottle + getThrottleIdleValue()) - motor[i];
+                    motorValue = (motorConfig()->maxthrottle + throttleIdleValue) - motor[i];
                 }
             } else {
                 motorValue = motor[i];
@@ -294,7 +294,7 @@ void FAST_CODE NOINLINE writeMotors(void)
             if (motor[i] == motorConfig()->mincommand) {
                 motorValue = motorConfig()->maxthrottle;
             } else {
-                motorValue = (motorConfig()->maxthrottle + getThrottleIdleValue()) - motor[i];
+                motorValue = (motorConfig()->maxthrottle + throttleIdleValue) - motor[i];
             }
         } else {
             motorValue = motor[i];
