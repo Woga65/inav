@@ -507,7 +507,7 @@ groups:
         max: 1
       - name: throttle_idle
         field: throttleIdle
-        min: 4
+        min: 0
         max: 30
       - name: motor_poles
         field: motorPoleCount
