@@ -707,7 +707,7 @@ groups:
         field: pwmOutputsReversed
         min: 0
         max: UINT16_MAX
-      - name: throttle_to_aux_channel
+      - name: aux_throttle_channel
         field: auxThrottleChannel
         min: 0
         max: MAX_AUX_CHANNEL_COUNT
