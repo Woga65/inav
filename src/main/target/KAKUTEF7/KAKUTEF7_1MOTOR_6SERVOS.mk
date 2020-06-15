@@ -1,0 +1,1 @@
+#KAKUTEF7_1MOTOR_6SERVOS.mk file

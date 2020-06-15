@@ -20,7 +20,7 @@
 
 #pragma once
 
-#ifdef KAKUTEF7MINI
+#if defined (KAKUTEF7MINI) || defined (KAKUTEF7MINI_7PWM) || defined (KAKUTEF7MINI_1MOTOR_6SERVOS)
 #define TARGET_BOARD_IDENTIFIER "KF7M"
 #define USBD_PRODUCT_STRING "KakuteF7-Mini"
 #else
@@ -120,7 +120,7 @@
 #define MAX7456_CS_PIN          SPI2_NSS_PIN
 #endif
 
-#if defined(KAKUTEF7MINI)
+#if defined(KAKUTEF7MINI) || defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS)
 #define M25P16_CS_PIN           SPI1_NSS_PIN
 #define M25P16_SPI_BUS          BUS_SPI1
 #define USE_FLASHFS
@@ -172,8 +172,10 @@
 #define SERIALRX_UART           SERIAL_PORT_USART6
 #define SERIALRX_PROVIDER       SERIALRX_SBUS
 
+#if !defined(KAKUTEF7MINI_7PWM) && !defined(KAKUTEF7_7PWM) && !defined(KAKUTEF7MINI_1MOTOR_6SERVOS) && !defined(KAKUTEF7_1MOTOR_6SERVOS)
 #define USE_LED_STRIP
 #define WS2811_PIN                      PD12   //TIM4_CH1
+#endif
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -183,4 +185,9 @@
 #define TARGET_IO_PORTD 0xffff
 #define TARGET_IO_PORTE 0xffff
 
+#if defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7_7PWM) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS) || defined(KAKUTEF7_1MOTOR_6SERVOS)
+#define MAX_PWM_OUTPUT_PORTS       7
+#else
 #define MAX_PWM_OUTPUT_PORTS       6
+#endif
+
