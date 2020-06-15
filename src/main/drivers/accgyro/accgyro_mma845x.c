@@ -139,6 +139,5 @@ bool mma8452Detect(accDev_t *acc)
 
     acc->initFn = mma8452Init;
     acc->readFn = mma8452Read;
-    acc->accAlign = acc->busDev->param;
     return true;
 }

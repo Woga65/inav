@@ -1,13 +1,13 @@
 /*
- * This file is part of iNav
+ * This file is part of Cleanflight and Betaflight.
  *
- * iNav is free software. You can redistribute
+ * Cleanflight and Betaflight are free software. You can redistribute
  * this software and/or modify this software under the terms of the
  * GNU General Public License as published by the Free Software
  * Foundation, either version 3 of the License, or (at your option)
  * any later version.
  *
- * iNav is distributed in the hope that it
+ * Cleanflight and Betaflight are distributed in the hope that they
  * will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
@@ -18,10 +18,12 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "drivers/persistent.h"
-#include <stdbool.h>
+#pragma once
 
-bool mscCheckBoot(void)
-{
-    return (persistentObjectRead(PERSISTENT_OBJECT_RESET_REASON) == RESET_MSC_REQUEST);
-}
+#include "cms/cms.h"
+#include "cms/cms_types.h"
+
+extern CMS_Menu cmsx_menuVtxSmartAudio;
+
+void saCmsUpdate(void);
+void saCmsResetOpmodel(void);

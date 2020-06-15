@@ -50,10 +50,6 @@ void pwmDriverInitialize(void) {
 }
 
 void pwmDriverSync(void) {
-    if (!STATE(PWM_DRIVER_AVAILABLE)) {
-        return;
-    }
-
     static uint8_t cycle = 0;
 
     (pwmDrivers[driverImplementationIndex].syncFunction)(cycle);

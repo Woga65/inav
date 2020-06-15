@@ -16,8 +16,6 @@ obj/
 patches/
 tools/
 downloads/
-gcc-arm-none-eabi-8-2018-q4-major/
-OmnibusF4NanoV7.btfl.h
 
 # script-generated files
 docs/Manual.pdf

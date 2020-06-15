@@ -95,8 +95,6 @@ struct serialPortVTable {
 
     bool (*isConnected)(const serialPort_t *instance);
 
-    bool (*isIdle)(serialPort_t *instance);
-
     // Optional functions used to buffer large writes.
     void (*beginWrite)(serialPort_t *instance);
     void (*endWrite)(serialPort_t *instance);
@@ -113,7 +111,6 @@ bool isSerialTransmitBufferEmpty(const serialPort_t *instance);
 void serialPrint(serialPort_t *instance, const char *str);
 uint32_t serialGetBaudRate(serialPort_t *instance);
 bool serialIsConnected(const serialPort_t *instance);
-bool serialIsIdle(serialPort_t *instance);
 
 // A shim that adapts the bufWriter API to the serialWriteBuf() API.
 void serialWriteBufShim(void *instance, const uint8_t *data, int count);

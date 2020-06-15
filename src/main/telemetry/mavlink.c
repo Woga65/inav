@@ -467,7 +467,7 @@ void mavlinkSendHUDAndHeartbeat(void)
     flightModeForTelemetry_e flm = getFlightModeForTelemetry();
     uint8_t mavCustomMode;
 
-    if (STATE(FIXED_WING_LEGACY)) {
+    if (STATE(FIXED_WING)) {
         mavCustomMode = inavToArduPlaneMap[flm];
     }
     else {

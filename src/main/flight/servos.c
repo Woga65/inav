@@ -28,7 +28,6 @@
 #include "common/axis.h"
 #include "common/filter.h"
 #include "common/maths.h"
-#include "common/global_variables.h"
 
 #include "config/config_reset.h"
 #include "config/feature.h"
@@ -36,7 +35,6 @@
 #include "config/parameter_group_ids.h"
 
 #include "drivers/pwm_output.h"
-#include "drivers/pwm_mapping.h"
 #include "drivers/time.h"
 
 #include "fc/config.h"
@@ -54,13 +52,12 @@
 
 #include "sensors/gyro.h"
 
-PG_REGISTER_WITH_RESET_TEMPLATE(servoConfig_t, servoConfig, PG_SERVO_CONFIG, 1);
+PG_REGISTER_WITH_RESET_TEMPLATE(servoConfig_t, servoConfig, PG_SERVO_CONFIG, 0);
 
 PG_RESET_TEMPLATE(servoConfig_t, servoConfig,
     .servoCenterPulse = 1500,
     .servoPwmRate = 50,             // Default for analog servos
     .servo_lowpass_freq = 20,       // Default servo update rate is 50Hz, everything above Nyquist frequency (25Hz) is going to fold and cause distortions
-    .servo_protocol = SERVO_TYPE_PWM,
     .flaperon_throw_offset = FLAPERON_THROW_DEFAULT,
     .tri_unarmed_servo = 1
 );
@@ -250,7 +247,7 @@ void servoMixer(float dT)
         input[INPUT_STABILIZED_YAW] = axisPID[YAW];
 
         // Reverse yaw servo when inverted in 3D mode only for multirotor and tricopter
-        if (feature(FEATURE_REVERSIBLE_MOTORS) && (rxGetChannelValue(THROTTLE) < PWM_RANGE_MIDDLE) &&
+        if (feature(FEATURE_3D) && (rxGetChannelValue(THROTTLE) < PWM_RANGE_MIDDLE) &&
         (mixerConfig()->platformType == PLATFORM_MULTIROTOR || mixerConfig()->platformType == PLATFORM_TRICOPTER)) {
             input[INPUT_STABILIZED_YAW] *= -1;
         }
@@ -265,13 +262,7 @@ void servoMixer(float dT)
 
     input[INPUT_FEATURE_FLAPS] = FLIGHT_MODE(FLAPERON) ? servoConfig()->flaperon_throw_offset : 0;
 
-    input[INPUT_MAX] = 500;
-#ifdef USE_LOGIC_CONDITIONS
-    input[INPUT_GVAR_0] = constrain(gvGet(0), -1000, 1000);
-    input[INPUT_GVAR_1] = constrain(gvGet(1), -1000, 1000);
-    input[INPUT_GVAR_2] = constrain(gvGet(2), -1000, 1000);
-    input[INPUT_GVAR_3] = constrain(gvGet(3), -1000, 1000);
-#endif
+    input[INPUT_LOGIC_ONE] = 500;
 
     if (IS_RC_MODE_ACTIVE(BOXCAMSTAB)) {
         input[INPUT_GIMBAL_PITCH] = scaleRange(attitude.values.pitch, -900, 900, -500, +500);
@@ -453,17 +444,17 @@ void processServoAutotrim(void)
     }
 }
 
-bool isServoOutputEnabled(void)
+bool FAST_CODE NOINLINE isServoOutputEnabled(void)
 {
     return servoOutputEnabled;
 }
 
-void setServoOutputEnabled(bool flag)
+void NOINLINE setServoOutputEnabled(bool flag)
 {
     servoOutputEnabled = flag;
 }
 
-bool isMixerUsingServos(void)
+bool FAST_CODE NOINLINE isMixerUsingServos(void)
 {
     return mixerUsesServos;
 }

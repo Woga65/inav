@@ -21,9 +21,6 @@
 #include <math.h>
 
 #include "platform.h"
-
-FILE_COMPILE_FOR_SPEED
-
 #include "build/debug.h"
 
 #include "common/axis.h"
@@ -115,6 +112,9 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
 {
     accelerationSensor_e accHardware = ACC_NONE;
 
+#ifdef USE_ACC_ADXL345
+#endif
+
     dev->accAlign = ALIGN_DEFAULT;
 
     requestedSensors[SENSOR_INDEX_ACC] = accHardwareToUse;
@@ -122,9 +122,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
     switch (accHardwareToUse) {
     case ACC_AUTODETECT:
         FALLTHROUGH;
-#ifdef USE_IMU_ADXL345
+#ifdef USE_ACC_ADXL345
     case ACC_ADXL345: {
         if (adxl345Detect(dev)) {
+#ifdef ACC_ADXL345_ALIGN
+            dev->accAlign = ACC_ADXL345_ALIGN;
+#endif
             accHardware = ACC_ADXL345;
             break;
         }
@@ -136,9 +139,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
     FALLTHROUGH;
 #endif
 
-#ifdef USE_IMU_LSM303DLHC
+#ifdef USE_ACC_LSM303DLHC
     case ACC_LSM303DLHC:
         if (lsm303dlhcAccDetect(dev)) {
+#ifdef ACC_LSM303DLHC_ALIGN
+            dev->accAlign = ACC_LSM303DLHC_ALIGN;
+#endif
             accHardware = ACC_LSM303DLHC;
             break;
         }
@@ -149,9 +155,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#ifdef USE_IMU_MPU6050
+#ifdef USE_ACC_MPU6050
     case ACC_MPU6050: // MPU6050
         if (mpu6050AccDetect(dev)) {
+#ifdef ACC_MPU6050_ALIGN
+            dev->accAlign = ACC_MPU6050_ALIGN;
+#endif
             accHardware = ACC_MPU6050;
             break;
         }
@@ -162,9 +171,13 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#ifdef USE_IMU_MMA8452
+#ifdef USE_ACC_MMA8452
     case ACC_MMA8452: // MMA8452
+
         if (mma8452Detect(dev)) {
+#ifdef ACC_MMA8452_ALIGN
+            dev->accAlign = ACC_MMA8452_ALIGN;
+#endif
             accHardware = ACC_MMA8452;
             break;
         }
@@ -175,9 +188,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#ifdef USE_IMU_BMA280
+#ifdef USE_ACC_BMA280
     case ACC_BMA280: // BMA280
         if (bma280Detect(dev)) {
+#ifdef ACC_BMA280_ALIGN
+            dev->accAlign = ACC_BMA280_ALIGN;
+#endif
             accHardware = ACC_BMA280;
             break;
         }
@@ -188,9 +204,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#ifdef USE_IMU_MPU6000
+#ifdef USE_ACC_MPU6000
     case ACC_MPU6000:
         if (mpu6000AccDetect(dev)) {
+#ifdef ACC_MPU6000_ALIGN
+            dev->accAlign = ACC_MPU6000_ALIGN;
+#endif
             accHardware = ACC_MPU6000;
             break;
         }
@@ -201,9 +220,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#if defined(USE_IMU_MPU6500)
+#if defined(USE_ACC_MPU6500)
     case ACC_MPU6500:
         if (mpu6500AccDetect(dev)) {
+#ifdef ACC_MPU6500_ALIGN
+            dev->accAlign = ACC_MPU6500_ALIGN;
+#endif
             accHardware = ACC_MPU6500;
             break;
         }
@@ -214,9 +236,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#if defined(USE_IMU_MPU9250)
+#if defined(USE_ACC_MPU9250)
     case ACC_MPU9250:
         if (mpu9250AccDetect(dev)) {
+#ifdef ACC_MPU9250_ALIGN
+            dev->accAlign = ACC_MPU9250_ALIGN;
+#endif
             accHardware = ACC_MPU9250;
             break;
         }
@@ -227,9 +252,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#if defined(USE_IMU_BMI160)
+#if defined(USE_ACC_BMI160)
     case ACC_BMI160:
         if (bmi160AccDetect(dev)) {
+#ifdef ACC_BMI160_ALIGN
+            dev->accAlign = ACC_BMI160_ALIGN;
+#endif
             accHardware = ACC_BMI160;
             break;
         }
@@ -240,9 +268,12 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
         FALLTHROUGH;
 #endif
 
-#ifdef USE_IMU_ICM20689
+#ifdef USE_ACC_ICM20689
     case ACC_ICM20689:
         if (icm20689AccDetect(dev)) {
+#ifdef ACC_ICM20689_ALIGN
+            dev->accAlign = ACC_ICM20689_ALIGN;
+#endif
             accHardware = ACC_ICM20689;
             break;
         }
@@ -254,7 +285,7 @@ static bool accDetect(accDev_t *dev, accelerationSensor_e accHardwareToUse)
 #endif
 
 
-#ifdef USE_IMU_FAKE
+#ifdef USE_FAKE_ACC
     case ACC_FAKE:
         if (fakeAccDetect(dev)) {
             accHardware = ACC_FAKE;
@@ -308,8 +339,6 @@ bool accInit(uint32_t targetLooptime)
         acc.extremes[axis].max = -100;
     }
 
-    // At this poinrt acc.dev.accAlign was set up by the driver from the busDev record
-    // If configuration says different - override
     if (accelerometerConfig()->acc_align != ALIGN_DEFAULT) {
         acc.dev.accAlign = accelerometerConfig()->acc_align;
     }
@@ -318,10 +347,11 @@ bool accInit(uint32_t targetLooptime)
 
 static bool calibratedPosition[6];
 static int32_t accSamples[6][3];
+static int  calibratedAxisCount = 0;
 
 uint8_t accGetCalibrationAxisFlags(void)
 {
-    if (STATE(ACCELEROMETER_CALIBRATED)) {
+    if (accIsCalibrationComplete() && STATE(ACCELEROMETER_CALIBRATED)) {
         return 0x3F;    // All 6 bits are set
     }
 
@@ -360,17 +390,16 @@ static int getPrimaryAxisIndex(int32_t accADCData[3])
         return -1;
 }
 
+bool accIsCalibrationComplete(void)
+{
+    return zeroCalibrationIsCompleteV(&zeroCalibration);
+}
+
 void accStartCalibration(void)
 {
     int positionIndex = getPrimaryAxisIndex(accADC);
 
-    // Fail if we can't detect the side
     if (positionIndex < 0) {
-        return;
-    }
-
-    // Fail if we have accelerometer fully calibrated and are NOT starting with TOP-UP position
-    if (STATE(ACCELEROMETER_CALIBRATED) && positionIndex != 0) {
         return;
     }
 
@@ -383,6 +412,7 @@ void accStartCalibration(void)
             accSamples[axis][Z] = 0;
         }
 
+        calibratedAxisCount = 0;
         DISABLE_STATE(ACCELEROMETER_CALIBRATED);
     }
 
@@ -390,30 +420,8 @@ void accStartCalibration(void)
     zeroCalibrationStartV(&zeroCalibration, CALIBRATING_ACC_TIME_MS, acc.dev.acc_1G * 0.05f, true);
 }
 
-static bool allOrientationsHaveCalibrationDataCollected(void)
-{
-    // Return true only if we have calibration data for all 6 positions
-    return calibratedPosition[0] && calibratedPosition[1] && calibratedPosition[2] &&
-           calibratedPosition[3] && calibratedPosition[4] && calibratedPosition[5];
-}
-
-bool accIsCalibrationComplete(void)
-{
-    return zeroCalibrationIsCompleteV(&zeroCalibration);
-}
-
 static void performAcclerationCalibration(void)
 {
-    // Shortcut - no need to do any math if acceleromter is marked as calibrated
-    if (STATE(ACCELEROMETER_CALIBRATED)) {
-        return;
-    }
-
-    // If zero calibration logic is finished - no need to do anything
-    if (accIsCalibrationComplete()) {
-        return;
-    }
-
     fpVector3_t v;
     int positionIndex = getPrimaryAxisIndex(accADC);
 
@@ -438,6 +446,7 @@ static void performAcclerationCalibration(void)
                 accSamples[positionIndex][Z] = v.v[Z];
 
                 calibratedPosition[positionIndex] = true;
+                calibratedAxisCount++;
             }
             else {
                 calibratedPosition[positionIndex] = false;
@@ -447,10 +456,9 @@ static void performAcclerationCalibration(void)
         }
     }
 
-    if (allOrientationsHaveCalibrationDataCollected()) {
+    if (calibratedAxisCount == 6) {
         sensorCalibrationState_t calState;
         float accTmp[3];
-        bool calFailed = false;
 
         /* Calculate offset */
         sensorCalibrationResetState(&calState);
@@ -459,12 +467,7 @@ static void performAcclerationCalibration(void)
             sensorCalibrationPushSampleForOffsetCalculation(&calState, accSamples[axis]);
         }
 
-        if (!sensorCalibrationSolveForOffset(&calState, accTmp)) {
-            accTmp[0] = 0.0f;
-            accTmp[1] = 0.0f;
-            accTmp[1] = 0.0f;
-            calFailed = true;
-        }
+        sensorCalibrationSolveForOffset(&calState, accTmp);
 
         accelerometerConfigMutable()->accZero.raw[X] = lrintf(accTmp[X]);
         accelerometerConfigMutable()->accZero.raw[Y] = lrintf(accTmp[Y]);
@@ -483,28 +486,13 @@ static void performAcclerationCalibration(void)
             sensorCalibrationPushSampleForScaleCalculation(&calState, axis / 2, accSample, acc.dev.acc_1G);
         }
 
-        if (!sensorCalibrationSolveForScale(&calState, accTmp)) {
-            accTmp[0] = 1.0f;
-            accTmp[1] = 1.0f;
-            accTmp[1] = 1.0f;
-            calFailed = true;
-        }
+        sensorCalibrationSolveForScale(&calState, accTmp);
 
         for (int axis = 0; axis < 3; axis++) {
             accelerometerConfigMutable()->accGain.raw[axis] = lrintf(accTmp[axis] * 4096);
         }
 
-        if (calFailed) {
-            // If failed - don't save and also invalidate the calibration data for all positions
-            for (int axis = 0; axis < 6; axis++) {
-                calibratedPosition[axis] = false;
-            }
-        }
-        else {
-            // saveConfigAndNotify will trigger eepromREAD and in turn call back the accelerometer gain validation
-            // that will set ENABLE_STATE(ACCELEROMETER_CALIBRATED) if all is good
-            saveConfigAndNotify();
-        }
+        saveConfigAndNotify();
     }
 }
 
@@ -549,7 +537,10 @@ void accUpdate(void)
         DEBUG_SET(DEBUG_ACC, axis, accADC[axis]);
     }
 
-    performAcclerationCalibration();
+    if (!accIsCalibrationComplete()) {
+        performAcclerationCalibration();
+        return;
+    }
 
     applyAccelerationZero(&accelerometerConfig()->accZero, &accelerometerConfig()->accGain);
 

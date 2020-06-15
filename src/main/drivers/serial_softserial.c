@@ -628,8 +628,7 @@ static const struct serialPortVTable softSerialVTable = {
     .isConnected = NULL,
     .writeBuf = NULL,
     .beginWrite = NULL,
-    .endWrite = NULL,
-    .isIdle = NULL,
+    .endWrite = NULL
 };
 
 #endif

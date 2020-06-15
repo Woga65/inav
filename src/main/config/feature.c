@@ -31,13 +31,12 @@ void latchActiveFeatures(void)
 
 bool featureConfigured(uint32_t mask)
 {
-    return (featureConfig()->enabledFeatures & mask) == mask;
+    return featureConfig()->enabledFeatures & mask;
 }
 
-bool feature(uint32_t mask)
+bool FAST_CODE NOINLINE feature(uint32_t mask)
 {
-    // Check for ALL masked features
-    return (activeFeaturesLatch & mask) == mask;
+    return activeFeaturesLatch & mask;
 }
 
 void featureSet(uint32_t mask)
