@@ -280,8 +280,13 @@
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
 // Number of available PWM outputs
-#define MAX_PWM_OUTPUT_PORTS    6
-#define TARGET_MOTOR_COUNT      6
+#if defined(OMNIBUSF4PRO)
+#define MAX_PWM_OUTPUT_PORTS    8
+#define TARGET_MOTOR_COUNT      8
+#else
+#define MAX_PWM_OUTPUT_PORTS    8
+#define TARGET_MOTOR_COUNT      8
+#endif
 #define USE_DSHOT
 #define USE_ESC_SENSOR
 
