@@ -32,7 +32,7 @@
 #include "drivers/bus.h"
 #include "drivers/io.h"
 
-#define BUSDEV_MAX_DEVICES 16
+#define BUSDEV_MAX_DEVICES 8
 
 #ifdef USE_SPI
 static void busDevPreInit_SPI(const busDeviceDescriptor_t * descriptor)
@@ -124,7 +124,6 @@ busDevice_t * busDeviceInit(busType_e bus, devHardwareType_e hw, uint8_t tag, re
                 dev->descriptorPtr = descriptor;
                 dev->busType = descriptor->busType;
                 dev->flags = descriptor->flags;
-                dev->param = descriptor->param;
 
                 switch (descriptor->busType) {
                     default:

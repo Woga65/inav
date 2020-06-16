@@ -118,7 +118,7 @@ bool m25p16_waitForReady(uint32_t timeoutMillis)
 {
     uint32_t time = millis();
     while (!m25p16_isReady()) {
-        if (timeoutMillis && (millis() - time > timeoutMillis)) {
+        if (millis() - time > timeoutMillis) {
             return false;
         }
     }

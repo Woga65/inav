@@ -24,5 +24,9 @@
 
 #define ICM20689_BIT_RESET                  (0x80)
 
+#if (defined(USE_GYRO_ICM20689) || defined(USE_ACC_ICM20689))
+
 bool icm20689AccDetect(accDev_t *acc);
 bool icm20689GyroDetect(gyroDev_t *gyro);
+
+#endif

@@ -187,8 +187,7 @@ static const struct serialPortVTable usbVTable[] = {
         .isConnected = usbVcpIsConnected,
         .writeBuf = usbVcpWriteBuf,
         .beginWrite = usbVcpBeginWrite,
-        .endWrite = usbVcpEndWrite,
-        .isIdle = NULL,
+        .endWrite = usbVcpEndWrite
     }
 };
 

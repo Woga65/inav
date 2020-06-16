@@ -70,11 +70,12 @@ defined in linker script */
   .weak  Reset_Handler
   .type  Reset_Handler, %function
 Reset_Handler:
-
-  // Defined in C code
-  bl persistentObjectInit
-  bl checkForBootLoaderRequest
-
+  ldr r0, =0x20009FFC         // HJI 11/9/2012
+  ldr r1, =0xDEADBEEF         // HJI 11/9/2012
+  ldr r2, [r0, #0]            // HJI 11/9/2012
+  str r0, [r0, #0]            // HJI 11/9/2012
+  cmp r2, r1                  // HJI 11/9/2012
+  beq Reboot_Loader           // HJI 11/9/2012
 
 /* Copy the data segment initializers from flash to SRAM */
   movs  r1, #0

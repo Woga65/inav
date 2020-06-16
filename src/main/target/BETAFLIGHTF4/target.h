@@ -30,8 +30,14 @@
 #define MPU6000_CS_PIN          PA4
 #define MPU6000_SPI_BUS		BUS_SPI1
 
-#define USE_IMU_MPU6000
-#define IMU_MPU6000_ALIGN       CW180_DEG
+#define USE_ACC
+#define USE_ACC_MPU6000
+#define ACC_MPU6000_ALIGN       CW180_DEG
+
+#define USE_GYRO
+#define USE_GYRO_MPU6000
+#define GYRO_MPU6000_ALIGN      CW180_DEG
+
 
 
 // MPU6000 interrupts
@@ -174,6 +180,3 @@
 #define MAX_PWM_OUTPUT_PORTS 4
 
 #define PCA9685_I2C_BUS         BUS_I2C2
-
-#define USE_DSHOT
-#define USE_ESC_SENSOR

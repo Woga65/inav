@@ -64,6 +64,8 @@ endif
 # Things that need to be maintained as the source changes
 #
 
+FORKNAME      = inav
+
 # Working directories
 SRC_DIR         := $(ROOT)/src/main
 OBJECT_DIR      := $(ROOT)/obj/main
@@ -83,8 +85,16 @@ MHZ_VALUE      ?=
 # used for turning on features like VCP and SDCARD
 FEATURES        =
 
-include $(ROOT)/make/version.mk
 include $(ROOT)/make/targets.mk
+
+REVISION = $(shell git rev-parse --short HEAD)
+
+FC_VER_MAJOR := $(shell grep " FC_VERSION_MAJOR" src/main/build/version.h | awk '{print $$3}' )
+FC_VER_MINOR := $(shell grep " FC_VERSION_MINOR" src/main/build/version.h | awk '{print $$3}' )
+FC_VER_PATCH := $(shell grep " FC_VERSION_PATCH" src/main/build/version.h | awk '{print $$3}' )
+
+FC_VER := $(FC_VER_MAJOR).$(FC_VER_MINOR).$(FC_VER_PATCH)
+FC_VER_SUFFIX ?=
 
 BUILD_DATE = $(shell date +%Y%m%d)
 
@@ -164,15 +174,12 @@ SIZE        = $(ARM_SDK_PREFIX)size
 # Tool options.
 #
 
-# Save original CFLAGS before modifying them, so we don't
-# add them twice when calling this Makefile recursively
-# for each target
-SAVED_CFLAGS	:= $(CFLAGS)
-
 ifeq ($(DEBUG),GDB)
-LTO_FLAGS   = 
+OPTIMIZE    = -O0
+LTO_FLAGS   = $(OPTIMIZE)
 else
-LTO_FLAGS   = -flto -fuse-linker-plugin
+OPTIMIZE    = -Os
+LTO_FLAGS   = -flto -fuse-linker-plugin $(OPTIMIZE)
 endif
 
 ifneq ($(SEMIHOSTING),)
@@ -245,6 +252,9 @@ CPPCHECK        = cppcheck $(CSOURCES) --enable=all --platform=unix64 \
 # Things we will build
 #
 TARGET_BIN	:= $(BIN_DIR)/$(FORKNAME)_$(FC_VER)
+ifneq ($(FC_VER_SUFFIX),)
+    TARGET_BIN	:= $(TARGET_BIN)-$(FC_VER_SUFFIX)
+endif
 TARGET_BIN	:= $(TARGET_BIN)_$(TARGET)
 ifneq ($(BUILD_SUFFIX),)
     TARGET_BIN	:= $(TARGET_BIN)_$(BUILD_SUFFIX)
@@ -291,37 +301,15 @@ $(TARGET_ELF): $(TARGET_OBJS)
 	$(V1) $(CROSS_CC) -o $@ $(filter %.o, $^) $(LDFLAGS)
 	$(V0) $(SIZE) $(TARGET_ELF)
 
-OPTIMIZE_FLAG_SPEED := "-Os"
-OPTIMIZE_FLAG_SIZE := "-Os"
-OPTIMIZE_FLAG_NORMAL := "-Os"
-
-ifneq ($(TARGET_MCU_GROUP), STM32F3)
-	OPTIMIZE_FLAG_SPEED := "-Ofast"
-	OPTIMIZE_FLAG_SIZE := "-Os"
-	OPTIMIZE_FLAG_NORMAL := "-O2"
-endif
-
-define compile_file
-	echo "%% $(1) $(2) $<" "$(STDOUT)" && \
-	$(CROSS_CC) -c -o $@ $(CFLAGS) $(2) $<
-endef
-
 # Compile
 $(TARGET_OBJ_DIR)/%.o: %.c
 	$(V1) mkdir -p $(dir $@)
-
-	$(V1) $(if $(findstring $<,$(SIZE_OPTIMISED_SRC)), \
-		$(call compile_file,(size),$(OPTIMIZE_FLAG_SIZE)) \
-	, \
-		$(if $(findstring $<,$(SPEED_OPTIMISED_SRC)), \
-			$(call compile_file,(speed),$(OPTIMIZE_FLAG_SPEED)) \
-		, \
-			$(call compile_file,(normal),$(OPTIMIZE_FLAG_NORMAL)) \
-		) \
-	)
+	$(V1) echo %% $(notdir $<) "$(STDOUT)"
+	$(V1) $(CROSS_CC) -c -o $@ $(CFLAGS) $<
 ifeq ($(GENERATE_ASM), 1)
 	$(V1) $(CROSS_CC) -S -fverbose-asm -Wa,-aslh -o $(patsubst %.o,%.txt.S,$@) -g $(ASM_CFLAGS) $<
 endif
+
 
 # Assemble
 $(TARGET_OBJ_DIR)/%.o: %.s
@@ -352,7 +340,7 @@ release: $(RELEASE_TARGETS)
 $(VALID_TARGETS):
 	$(V0) echo "" && \
 	echo "Building $@" && \
-	CFLAGS=$(SAVED_CFLAGS) $(MAKE) -j 8 TARGET=$@ && \
+	$(MAKE) -j 8 TARGET=$@ && \
 	echo "Building $@ succeeded."
 
 ## clean             : clean up all temporary / machine-generated files

@@ -46,7 +46,6 @@
 
 #if defined(STM32F4) || defined(STM32F7)
 #define USE_USB_MSC
-#define USE_SERVO_SBUS
 #endif
 
 #define USE_ADC_AVERAGING
@@ -59,6 +58,8 @@
 #define USE_TELEMETRY_LTM
 #define USE_TELEMETRY_FRSKY
 
+#define USE_MR_BRAKING_MODE
+
 #if defined(STM_FAST_TARGET)
 #define SCHEDULER_DELAY_LIMIT           10
 #else
@@ -66,13 +67,7 @@
 #endif
 
 #if (FLASH_SIZE > 256)
-#define USE_MR_BRAKING_MODE
-#define USE_PITOT
-#define USE_PITOT_ADC
-#define USE_PITOT_VIRTUAL
-
 #define USE_DYNAMIC_FILTERS
-#define USE_GYRO_KALMAN
 #define USE_EXTENDED_CMS_MENUS
 #define USE_UAV_INTERCONNECT
 #define USE_RX_UIB
@@ -154,6 +149,9 @@
 #define USE_SERIAL_PASSTHROUGH
 #define NAV_MAX_WAYPOINTS       60
 #define USE_RCDEVICE
+#define USE_PITOT
+#define USE_PITOT_ADC
+#define USE_PITOT_VIRTUAL
 
 //Enable VTX control
 #define USE_VTX_CONTROL

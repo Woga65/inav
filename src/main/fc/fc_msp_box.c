@@ -164,13 +164,13 @@ void initActiveBoxIds(void)
     activeBoxIdCount = 0;
     activeBoxIds[activeBoxIdCount++] = BOXARM;
 
-    if (sensors(SENSOR_ACC) && STATE(ALTITUDE_CONTROL)) {
+    if (sensors(SENSOR_ACC)) {
         activeBoxIds[activeBoxIdCount++] = BOXANGLE;
         activeBoxIds[activeBoxIdCount++] = BOXHORIZON;
         activeBoxIds[activeBoxIdCount++] = BOXTURNASSIST;
     }
 
-    if (!feature(FEATURE_AIRMODE) && STATE(ALTITUDE_CONTROL)) {
+    if (!feature(FEATURE_AIRMODE)) {
         activeBoxIds[activeBoxIdCount++] = BOXAIRMODE;
     }
 
@@ -181,39 +181,35 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXHEADADJ;
     }
 
-    if (STATE(ALTITUDE_CONTROL)) {
-        activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
-    }
+    activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
 
     //Camstab mode is enabled always
     activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
 
 #ifdef USE_GPS
-    if (STATE(ALTITUDE_CONTROL) && (sensors(SENSOR_BARO) || (STATE(AIRPLANE) && feature(FEATURE_GPS)))) {
+    if (sensors(SENSOR_BARO) || (STATE(FIXED_WING) && feature(FEATURE_GPS))) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
         activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
     }
 
-    const bool navReadyMultirotor = STATE(MULTIROTOR) && (getHwCompassStatus() != HW_SENSOR_NONE) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
-    const bool navReadyOther = !STATE(MULTIROTOR) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
+    const bool navReadyQuads = !STATE(FIXED_WING) && (getHwCompassStatus() != HW_SENSOR_NONE) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
+    const bool navReadyPlanes = STATE(FIXED_WING) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
     const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
-    if (navFlowDeadReckoning || navReadyMultirotor || navReadyOther) {
-        if (!STATE(ROVER) && !STATE(BOAT)) {
-            activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
-        }
-        if (STATE(AIRPLANE)) {
+    if (navFlowDeadReckoning || navReadyQuads || navReadyPlanes) {
+        activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
+        if (STATE(FIXED_WING)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;
         }
     }
 
-    if (navReadyMultirotor || navReadyOther) {
+    if (navReadyQuads || navReadyPlanes) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
 
         if (feature(FEATURE_GPS)) {
             activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
-            if (STATE(AIRPLANE)) {
+            if (STATE(FIXED_WING)) {
                 activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
             }
         }
@@ -227,11 +223,8 @@ void initActiveBoxIds(void)
 
 #endif
 
-    if (STATE(AIRPLANE) || STATE(ROVER) || STATE(BOAT)) {
+    if (STATE(FIXED_WING)) {
         activeBoxIds[activeBoxIdCount++] = BOXMANUAL;
-    }
-
-    if (STATE(AIRPLANE)) {
         if (!feature(FEATURE_FW_LAUNCH)) {
            activeBoxIds[activeBoxIdCount++] = BOXNAVLAUNCH;
         }

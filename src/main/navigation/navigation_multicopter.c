@@ -31,7 +31,6 @@
 #include "common/axis.h"
 #include "common/maths.h"
 #include "common/filter.h"
-#include "common/utils.h"
 
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
@@ -165,7 +164,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
 
 void setupMulticopterAltitudeController(void)
 {
-    const throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+    const throttleStatus_e throttleStatus = calculateThrottleStatus();
 
     if (navConfig()->general.flags.use_thr_mid_for_althold) {
         altHoldThrottleRCZero = rcLookupThrottleMid();

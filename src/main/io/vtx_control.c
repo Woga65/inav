@@ -42,6 +42,7 @@
 PG_REGISTER_WITH_RESET_TEMPLATE(vtxConfig_t, vtxConfig, PG_VTX_CONFIG, 2);
 
 PG_RESET_TEMPLATE(vtxConfig_t, vtxConfig,
+//    .vtxChannelActivationConditions = { 0 },
       .halfDuplex = true,
 );
 

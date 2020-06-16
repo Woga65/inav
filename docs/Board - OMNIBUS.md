@@ -1,7 +1,5 @@
 # Board - OMNIBUS F3
 
-> This board is not supported in recent INAV releases
-
 ## Hardware Features
 
 Refer to the product web page:
