@@ -412,6 +412,7 @@ void FAST_CODE writeMotors(void)
                     motorValue = motor[i];
                 }
             }
+
 #else
             // We don't define USE_DSHOT
             // sibi
