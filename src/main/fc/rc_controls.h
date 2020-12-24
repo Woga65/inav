@@ -42,7 +42,8 @@ typedef enum rc_alias {
 
 typedef enum {
     THROTTLE_LOW = 0,
-    THROTTLE_HIGH
+    THROTTLE_HIGH,
+    COLLECTIVE_MID      //sibi
 } throttleStatus_e;
 
 typedef enum {

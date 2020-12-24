@@ -172,7 +172,8 @@ void setupMulticopterAltitudeController(void)
     }
     else {
         // If throttle status is THROTTLE_LOW - use Thr Mid anyway
-        if (throttleStatus == THROTTLE_LOW) {
+//      if (throttleStatus == THROTTLE_LOW || throttleStatus == COLLECTIVE_MID) { //sibi
+        if (throttleStatus != THROTTLE_HIGH) { //sibi
             altHoldThrottleRCZero = rcLookupThrottleMid();
         }
         else {
@@ -187,7 +188,8 @@ void setupMulticopterAltitudeController(void)
 
     // Force AH controller to initialize althold integral for pending takeoff on reset
     // Signal for that is low throttle _and_ low actual altitude
-    if (throttleStatus == THROTTLE_LOW && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) {
+//  if (throttleStatus == THROTTLE_LOW && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) {
+    if (throttleStatus != THROTTLE_HIGH && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) { //sibi
         prepareForTakeoffOnReset = true;
     }
 }

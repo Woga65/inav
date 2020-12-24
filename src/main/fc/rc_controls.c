@@ -47,6 +47,7 @@
 
 #include "flight/pid.h"
 #include "flight/failsafe.h"
+#include "flight/mixer.h"
 
 #include "io/gps.h"
 #include "io/beeper.h"
@@ -102,17 +103,27 @@ bool areSticksDeflectedMoreThanPosHoldDeadband(void)
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
     int value;
+    int auxValue; //sibi
+    const uint16_t collectiveThrottleChannel = mixerConfig()->auxThrottleChannel + NON_AUX_CHANNEL_COUNT -1; //sibi
     if (type == THROTTLE_STATUS_TYPE_RC) {
         value = rxGetChannelValue(THROTTLE);
+        auxValue = rxGetChannelValue(collectiveThrottleChannel); //sibi
     } else {
         value = rcCommand[THROTTLE];
+        auxValue = rcCommand[collectiveThrottleChannel]; //sibi
     }
 
     const uint16_t mid_throttle_deadband = rcControlsConfig()->mid_throttle_deadband;
-    if (feature(FEATURE_REVERSIBLE_MOTORS) && (value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband)))
+    if (feature(FEATURE_REVERSIBLE_MOTORS) && (value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband))) { //sibi
         return THROTTLE_LOW;
-    else if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))
+    }
+    if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck) && !mixerConfig()->auxThrottleChannel) { //sibi
         return THROTTLE_LOW;
+    }
+    if (!feature(FEATURE_REVERSIBLE_MOTORS) && mixerConfig()->auxThrottleChannel && (auxValue < PWM_RANGE_MIN + 1)) { //sibi
+        return COLLECTIVE_MID;
+//        return THROTTLE_LOW;
+    }
 
     return THROTTLE_HIGH;
 }
@@ -193,6 +204,7 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
     if (STATE(AIRPLANE) && feature(FEATURE_MOTOR_STOP) && armingConfig()->fixed_wing_auto_arm) {
         // Auto arm on throttle when using fixedwing and motorstop
         if (throttleStatus != THROTTLE_LOW) {
+//      if (throttleStatus == THROTTLE_HIGH) { //sibi
             tryArm();
             return;
         }
@@ -208,7 +220,8 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
             if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && rxIsReceivingSignal() && !failsafeIsActive()) {
                 const timeMs_t disarmDelay = currentTimeMs - rcDisarmTimeMs;
                 if (disarmDelay > armingConfig()->switchDisarmDelayMs) {
-                    if (armingConfig()->disarm_kill_switch || (throttleStatus == THROTTLE_LOW)) {
+//                  if (armingConfig()->disarm_kill_switch || (throttleStatus == THROTTLE_LOW)) {
+                    if (armingConfig()->disarm_kill_switch || (throttleStatus != THROTTLE_HIGH)) { //sibi
                         disarm(DISARM_SWITCH);
                     }
                 }

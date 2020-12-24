@@ -203,7 +203,8 @@ static void updateArmingStatus(void)
         /* CHECK: Throttle */
         if (!armingConfig()->fixed_wing_auto_arm) {
             // Don't want this check if fixed_wing_auto_arm is in use - machine arms on throttle > LOW
-            if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW) {
+//            if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != COLLECTIVE_MID) {
+            if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_HIGH) {
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_THROTTLE);
             } else {
                 DISABLE_ARMING_FLAG(ARMING_DISABLED_THROTTLE);
@@ -540,7 +541,7 @@ void processRx(timeUs_t currentTimeUs)
     if (ARMING_FLAG(ARMED) && feature(FEATURE_MOTOR_STOP) && !STATE(FIXED_WING_LEGACY)) {
         static bool armedBeeperOn = false;
 
-        if (throttleStatus == THROTTLE_LOW) {
+        if (throttleStatus == THROTTLE_LOW || throttleStatus == COLLECTIVE_MID) { //sibi
             beeper(BEEPER_ARMED);
             armedBeeperOn = true;
         } else if (armedBeeperOn) {
@@ -655,7 +656,8 @@ void processRx(timeUs_t currentTimeUs)
         pidResetErrorAccumulators();
     }
     else if (STATE(FIXED_WING_LEGACY) || rcControlsConfig()->airmodeHandlingType == STICK_CENTER) {
-        if (throttleStatus == THROTTLE_LOW) {
+        if ((throttleStatus == THROTTLE_LOW) || (throttleStatus == COLLECTIVE_MID)) {    //sibi
+//      if (throttleStatus == THROTTLE_LOW) {    
             if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive() && ARMING_FLAG(ARMED)) {
                 rollPitchStatus_e rollPitchStatus = calculateRollPitchCenterStatus();
 
@@ -678,7 +680,8 @@ void processRx(timeUs_t currentTimeUs)
     } else if (rcControlsConfig()->airmodeHandlingType == THROTTLE_THRESHOLD) {
         DISABLE_STATE(ANTI_WINDUP);
         //This case applies only to MR when Airmode management is throttle threshold activated
-        if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
+//      if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
+        if (throttleStatus != THROTTLE_HIGH && !STATE(AIRMODE_ACTIVE)) { //sibi
             pidResetErrorAccumulators();
         }
     }

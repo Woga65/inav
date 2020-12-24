@@ -257,10 +257,6 @@ void failsafeUpdateRcCommandValues(void)
 void failsafeApplyControlInput(void)
 {
     // Prepare FAILSAFE_CHANNEL_AUTO values for rcCommand
-    int8_t collectiveThrottleChannel = (mixerConfig()->auxThrottleChannel < 4) ? mixerConfig()->auxThrottleChannel : 0;  // sibi
-    if (collectiveThrottleChannel) {
-        collectiveThrottleChannel += NON_AUX_CHANNEL_COUNT - 1;
-    }
     int16_t autoRcCommand[4];
     if (STATE(FIXED_WING_LEGACY)) {
         autoRcCommand[ROLL] = pidAngleToRcCommand(failsafeConfig()->failsafe_fw_roll_angle, pidProfile()->max_angle_inclination[FD_ROLL]);
@@ -291,7 +287,8 @@ void failsafeApplyControlInput(void)
                         break;
 
                     case THROTTLE:
-                        rcCommand[idx] = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIDDLE : getThrottleIdleValue();
+                        rcCommand[idx] = (feature(FEATURE_REVERSIBLE_MOTORS) || mixerConfig()->auxThrottleChannel) ? PWM_RANGE_MIDDLE : getThrottleIdleValue(); //sibi
+//                        rcCommand[idx] = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIDDLE : getThrottleIdleValue();
                         break;
                 }
                 break;

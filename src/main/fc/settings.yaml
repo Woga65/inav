@@ -715,7 +715,7 @@ groups:
       - name: aux_throttle_channel
         field: auxThrottleChannel
         min: 0
-        max: MAX_AUX_CHANNEL_COUNT
+        max: 4
 
   - name: PG_REVERSIBLE_MOTORS_CONFIG
     type: reversibleMotorsConfig_t

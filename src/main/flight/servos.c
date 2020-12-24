@@ -308,6 +308,12 @@ void servoMixer(float dT)
     input[INPUT_RC_CH16]     = GET_RX_CHANNEL_INPUT(AUX12);
 #undef GET_RX_CHANNEL_INPUT
 
+    int8_t collectiveThrottleChannel = mixerConfig()->auxThrottleChannel;  // sibi
+    if (collectiveThrottleChannel && !ARMING_FLAG(ARMED)) {
+        collectiveThrottleChannel += 7;
+        input[collectiveThrottleChannel] = -500;
+    }
+    
     for (int i = 0; i < MAX_SUPPORTED_SERVOS; i++) {
         servo[i] = 0;
     }

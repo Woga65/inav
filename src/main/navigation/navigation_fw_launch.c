@@ -146,7 +146,8 @@ static void applyFixedWingLaunchIdleLogic(void)
     else
     {
         static float timeThrottleRaisedMs;
-        if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW)
+//      if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW)
+        if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_HIGH) //sibi
         {
             timeThrottleRaisedMs = millis();
         }

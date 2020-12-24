@@ -279,14 +279,18 @@ void mixerResetDisarmedMotors(void)
         throttleRangeMin = throttleDeadbandHigh;
         throttleRangeMax = motorConfig()->maxthrottle;
     } else {
-        motorZeroCommand = motorConfig()->mincommand;
+        if (mixerConfig()->auxThrottleChannel) {       //sibi
+            motorZeroCommand = reversibleMotorsConfig()->neutral;
+        } else {
+            motorZeroCommand = motorConfig()->mincommand;
+        }
         throttleRangeMin = getThrottleIdleValue();
         throttleRangeMax = motorConfig()->maxthrottle;
     }
 
     reversibleMotorsThrottleState = MOTOR_DIRECTION_FORWARD;
 
-    if (feature(FEATURE_MOTOR_STOP)) {
+    if (feature(FEATURE_MOTOR_STOP) || mixerConfig()->auxThrottleChannel) { //sibi
         motorValueWhenStopped = motorZeroCommand;
     } else {
         motorValueWhenStopped = getThrottleIdleValue();
@@ -442,8 +446,11 @@ void writeAllMotors(int16_t mc)
 
 void stopMotors(void)
 {
-    writeAllMotors(feature(FEATURE_REVERSIBLE_MOTORS) ? reversibleMotorsConfig()->neutral : motorConfig()->mincommand);
-
+    if (mixerConfig()->auxThrottleChannel) {    //sibi
+        writeAllMotors(reversibleMotorsConfig()->neutral);
+    } else {
+        writeAllMotors(feature(FEATURE_REVERSIBLE_MOTORS) ? reversibleMotorsConfig()->neutral : motorConfig()->mincommand);
+    }
     delay(50); // give the timers and ESCs a chance to react.
 }
 
@@ -546,6 +553,9 @@ void FAST_CODE mixTable(const float dT)
         if (feature(FEATURE_THR_VBAT_COMP) && isAmperageConfigured() && feature(FEATURE_VBAT)) {                
             mixerThrottleCommand = MIN(throttleRangeMin + (mixerThrottleCommand - throttleRangeMin) * calculateThrottleCompensationFactor(), throttleRangeMax);
         }
+        if (mixerConfig()->auxThrottleChannel) { //sibi
+            motorValueWhenStopped = getReversibleMotorsThrottleDeadband();
+        }
     }
 
     throttleMin = throttleRangeMin;
@@ -603,6 +613,7 @@ motorStatus_e getMotorStatus(void)
     }
 
     if (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW) {
+//  if (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) != THROTTLE_HIGH) { //sibi
         if ((STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE)) && (!(navigationIsFlyingAutonomousMode() && navConfig()->general.flags.auto_overrides_motor_stop)) && (!failsafeIsActive())) {
             return MOTOR_STOPPED_USER;
         }
