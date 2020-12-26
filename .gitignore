@@ -8,16 +8,16 @@
 .project
 .settings
 .cproject
+__pycache__
 startup_stm32f10x_md_gcc.s
 .vagrant/
 .vscode/
 cov-int*
-obj/
-patches/
-tools/
-downloads/
-gcc-arm-none-eabi-8-2018-q4-major/
-OmnibusF4NanoV7.btfl.h
+/build/
+/obj/
+/patches/
+/tools/
+/downloads/
 
 # script-generated files
 docs/Manual.pdf

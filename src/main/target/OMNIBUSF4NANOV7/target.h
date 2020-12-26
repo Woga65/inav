@@ -51,16 +51,16 @@
 // #define USE_EXTI
 // #define GYRO_INT_EXTI            NONE
 
-#define USE_GYRO
-#define USE_ACC
+//#define USE_GYRO
+//#define USE_ACC
 
-#define USE_GYRO_MPU6500
-#define USE_ACC_MPU6500
+#define USE_IMU_MPU6500
+//#define USE_ACC_MPU6500
 
 #define MPU6500_CS_PIN          PD2
 #define MPU6500_SPI_BUS         BUS_SPI3
-#define GYRO_MPU6500_ALIGN      CW0_DEG
-#define ACC_MPU6500_ALIGN       CW0_DEG
+#define IMU_MPU6500_ALIGN      CW0_DEG
+//#define ACC_MPU6500_ALIGN       CW0_DEG
 
 #define USE_MAG
 #define MAG_I2C_BUS             BUS_I2C1
