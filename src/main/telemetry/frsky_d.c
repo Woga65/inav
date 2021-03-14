@@ -196,8 +196,8 @@ static void sendThrottleOrBatterySizeAsRpm(void)
     uint16_t throttleForRPM = rcCommand[THROTTLE] / BLADE_NUMBER_DIVIDER;
     sendDataHead(ID_RPM);
     if (ARMING_FLAG(ARMED)) {
-        const throttleStatus_e throttleStatus = calculateThrottleStatus();
-        if (throttleStatus == THROTTLE_LOW && feature(FEATURE_MOTOR_STOP))
+        const throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+        if (throttleStatus != THROTTLE_HIGH && feature(FEATURE_MOTOR_STOP)) //sibi
                     throttleForRPM = 0;
         serialize16(throttleForRPM);
     } else {

@@ -33,6 +33,7 @@
 #define USE_SERIALRX_SBUS       // Very common protocol
 #define USE_SERIALRX_IBUS       // Cheap FlySky & Turnigy receivers
 #define USE_SERIALRX_FPORT
+#define USE_SERIALRX_FPORT2
 
 #define COMMON_DEFAULT_FEATURES (FEATURE_TX_PROF_SEL)
 
@@ -45,7 +46,7 @@
 #endif
 
 #if defined(STM32F4) || defined(STM32F7)
-#define USE_USB_MSC
+#define USE_SERVO_SBUS
 #endif
 
 #define USE_ADC_AVERAGING
@@ -53,12 +54,11 @@
 #define USE_BLACKBOX
 #define USE_GPS
 #define USE_GPS_PROTO_UBLOX
+#define USE_GPS_PROTO_MSP
 #define USE_NAV
 #define USE_TELEMETRY
 #define USE_TELEMETRY_LTM
 #define USE_TELEMETRY_FRSKY
-
-#define USE_MR_BRAKING_MODE
 
 #if defined(STM_FAST_TARGET)
 #define SCHEDULER_DELAY_LIMIT           10
@@ -67,7 +67,13 @@
 #endif
 
 #if (FLASH_SIZE > 256)
+#define USE_MR_BRAKING_MODE
+#define USE_PITOT
+#define USE_PITOT_ADC
+#define USE_PITOT_VIRTUAL
+
 #define USE_DYNAMIC_FILTERS
+#define USE_GYRO_KALMAN
 #define USE_EXTENDED_CMS_MENUS
 #define USE_UAV_INTERCONNECT
 #define USE_RX_UIB
@@ -88,8 +94,10 @@
 #define USE_OPFLOW_CXOF
 #define USE_OPFLOW_MSP
 
+// Allow default airspeed sensors
 #define USE_PITOT
 #define USE_PITOT_MS4525
+#define USE_PITOT_MSP
 
 #define USE_1WIRE
 #define USE_1WIRE_DS2482
@@ -108,6 +116,7 @@
 #define USE_TELEMETRY_SIM
 #define USE_FRSKYOSD
 #define USE_DJI_HD_OSD
+#define USE_SMARTPORT_MASTER
 
 #define NAV_NON_VOLATILE_WAYPOINT_CLI
 
@@ -116,12 +125,26 @@
 #define USE_D_BOOST
 #define USE_ANTIGRAVITY
 
+#define USE_I2C_IO_EXPANDER
+
+#define USE_SERIALRX_SRXL2     // Spektrum SRXL2 protocol
+#define USE_TELEMETRY_SRXL
+#define USE_SPEKTRUM_CMS_TELEMETRY
+//#define USE_SPEKTRUM_VTX_CONTROL //Some functions from betaflight still not implemented
+#define USE_SPEKTRUM_VTX_TELEMETRY
+
+#define USE_VTX_COMMON
+
+#define USE_SERIALRX_GHST
+#define USE_TELEMETRY_GHST
+
 #else // FLASH_SIZE < 256
 #define LOG_LEVEL_MAXIMUM LOG_LEVEL_ERROR
 #endif
 
 #if (FLASH_SIZE > 128)
 #define NAV_FIXED_WING_LANDING
+#define USE_SAFE_HOME
 #define USE_AUTOTUNE_FIXED_WING
 #define USE_LOG
 #define USE_STATS
@@ -149,9 +172,6 @@
 #define USE_SERIAL_PASSTHROUGH
 #define NAV_MAX_WAYPOINTS       60
 #define USE_RCDEVICE
-#define USE_PITOT
-#define USE_PITOT_ADC
-#define USE_PITOT_VIRTUAL
 
 //Enable VTX control
 #define USE_VTX_CONTROL
@@ -160,8 +180,7 @@
 #define USE_VTX_FFPV
 
 #ifndef STM32F3 //F3 series does not have enoug RAM to support logic conditions
-#define USE_LOGIC_CONDITIONS
-#define USE_GLOBAL_FUNCTIONS
+#define USE_PROGRAMMING_FRAMEWORK
 #define USE_CLI_BATCH
 #endif
 

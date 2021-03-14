@@ -20,7 +20,7 @@
 
 #pragma once
 
-#ifdef KAKUTEF7MINI
+#if defined (KAKUTEF7MINI) || defined (KAKUTEF7MINI_7PWM) || defined (KAKUTEF7MINI_1MOTOR_6SERVOS)
 #define TARGET_BOARD_IDENTIFIER "KF7M"
 #define USBD_PRODUCT_STRING "KakuteF7-Mini"
 #else
@@ -36,30 +36,22 @@
 #define USE_DSHOT
 #define USE_ESC_SENSOR
 
-#define USE_ACC
-#define USE_GYRO
-
 #define USE_MPU_DATA_READY_SIGNAL
 #define USE_EXTI
 
 // ICM-20689
-#define USE_ACC_ICM20689
-#define USE_GYRO_ICM20689
-#define GYRO_ICM20689_ALIGN      CW270_DEG
-#define ACC_ICM20689_ALIGN       CW270_DEG
-
+#define USE_IMU_ICM20689
+#define IMU_ICM20689_ALIGN       CW270_DEG
 #define GYRO_INT_EXTI            PE1
 #define ICM20689_CS_PIN          SPI4_NSS_PIN
 #define ICM20689_SPI_BUS         BUS_SPI4
 
-#define USE_GYRO_MPU6000
+#define USE_IMU_MPU6000
+#define IMU_MPU6000_ALIGN       CW270_DEG
 #define GYRO_INT_EXTI           PE1
-#define GYRO_MPU6000_ALIGN      CW270_DEG
 #define MPU6000_CS_PIN          SPI4_NSS_PIN
 #define MPU6000_SPI_BUS         BUS_SPI4
 
-#define USE_ACC_MPU6000
-#define ACC_MPU6000_ALIGN       CW270_DEG
 
 #define USB_IO
 #define USE_VCP
@@ -120,7 +112,7 @@
 #define MAX7456_CS_PIN          SPI2_NSS_PIN
 #endif
 
-#if defined(KAKUTEF7MINI)
+#if defined(KAKUTEF7MINI) || defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS)
 #define M25P16_CS_PIN           SPI1_NSS_PIN
 #define M25P16_SPI_BUS          BUS_SPI1
 #define USE_FLASHFS
@@ -142,6 +134,7 @@
 
 #define USE_BARO
 #define USE_BARO_BMP280
+#define USE_BARO_MS5611
 #define BARO_I2C_BUS            BUS_I2C1
 
 #define USE_MAG
@@ -155,6 +148,8 @@
 #define USE_MAG_LIS3MDL
 
 #define TEMPERATURE_I2C_BUS     BUS_I2C1
+
+#define RANGEFINDER_I2C_BUS     BUS_I2C1
 
 #define USE_ADC
 #define ADC_CHANNEL_1_PIN           PC2
@@ -172,8 +167,10 @@
 #define SERIALRX_UART           SERIAL_PORT_USART6
 #define SERIALRX_PROVIDER       SERIALRX_SBUS
 
+#if !defined(KAKUTEF7MINI_7PWM) && !defined(KAKUTEF7_7PWM) && !defined(KAKUTEF7MINI_1MOTOR_6SERVOS) && !defined(KAKUTEF7_1MOTOR_6SERVOS)
 #define USE_LED_STRIP
 #define WS2811_PIN                      PD12   //TIM4_CH1
+#endif
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -183,4 +180,9 @@
 #define TARGET_IO_PORTD 0xffff
 #define TARGET_IO_PORTE 0xffff
 
+#if defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7_7PWM) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS) || defined(KAKUTEF7_1MOTOR_6SERVOS)
+#define MAX_PWM_OUTPUT_PORTS       7
+#else
 #define MAX_PWM_OUTPUT_PORTS       6
+#endif
+

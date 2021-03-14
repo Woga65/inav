@@ -23,6 +23,8 @@
 
 #include "platform.h"
 
+FILE_COMPILE_FOR_SPEED
+
 #include "blackbox/blackbox.h"
 
 #include "build/build_config.h"
@@ -75,7 +77,7 @@
 // http://gentlenav.googlecode.com/files/fastRotations.pdf
 
 #define SPIN_RATE_LIMIT             20
-#define MAX_ACC_SQ_NEARNESS         25      // 25% or G^2, accepted acceleration of (0.87 - 1.12G)
+#define MAX_ACC_NEARNESS            0.33    // 33% or G error soft-accepted (0.67-1.33G)
 #define IMU_CENTRIFUGAL_LPF         1       // Hz
 
 FASTRAM fpVector3_t imuMeasuredAccelBF;
@@ -470,18 +472,14 @@ STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 
 static float imuCalculateAccelerometerWeight(const float dT)
 {
-    // If centrifugal test passed - do the usual "nearness" style check
     float accMagnitudeSq = 0;
-
     for (int axis = 0; axis < 3; axis++) {
         accMagnitudeSq += acc.accADCf[axis] * acc.accADCf[axis];
     }
 
-    // Magnitude^2 in percent of G^2
-    const float nearness = ABS(100 - (accMagnitudeSq * 100));
-    const float accWeight_Nearness = (nearness > MAX_ACC_SQ_NEARNESS) ? 0.0f : 1.0f;
+    const float accWeight_Nearness = bellCurve(sqrtf(accMagnitudeSq) - 1.0f, MAX_ACC_NEARNESS);
 
-    // Experiment: if rotation rate on a FIXED_WING is higher than a threshold - centrifugal force messes up too much and we 
+    // Experiment: if rotation rate on a FIXED_WING_LEGACY is higher than a threshold - centrifugal force messes up too much and we 
     // should not use measured accel for AHRS comp
     //      Centrifugal acceleration AccelC = Omega^2 * R = Speed^2 / R
     //          Omega = Speed / R
@@ -499,7 +497,7 @@ static float imuCalculateAccelerometerWeight(const float dT)
     // Default - don't apply rate/ignore scaling
     float accWeight_RateIgnore = 1.0f;
 
-    if (ARMING_FLAG(ARMED) && STATE(FIXED_WING) && imuConfig()->acc_ignore_rate) {
+    if (ARMING_FLAG(ARMED) && STATE(FIXED_WING_LEGACY) && imuConfig()->acc_ignore_rate) {
         const float rotRateMagnitude = sqrtf(vectorNormSquared(&imuMeasuredRotationBF));
         const float rotRateMagnitudeFiltered = pt1FilterApply4(&rotRateFilter, rotRateMagnitude, IMU_CENTRIFUGAL_LPF, dT);
 
@@ -532,7 +530,7 @@ static void imuCalculateEstimatedAttitude(float dT)
     bool useCOG = false;
 
 #if defined(USE_GPS)
-    if (STATE(FIXED_WING)) {
+    if (STATE(FIXED_WING_LEGACY)) {
         bool canUseCOG = isGPSHeadingValid();
 
         // Prefer compass (if available)
@@ -631,7 +629,7 @@ void imuCheckVibrationLevels(void)
     // DEBUG_VIBE values 4-7 are used by NAV estimator
 }
 
-void FAST_CODE NOINLINE imuUpdateAttitude(timeUs_t currentTimeUs)
+void imuUpdateAttitude(timeUs_t currentTimeUs)
 {
     /* Calculate dT */
     static timeUs_t previousIMUUpdateTimeUs;
@@ -670,7 +668,7 @@ bool isImuReady(void)
 
 bool isImuHeadingValid(void)
 {
-    return (sensors(SENSOR_MAG) && STATE(COMPASS_CALIBRATED)) || (STATE(FIXED_WING) && gpsHeadingInitialized);
+    return (sensors(SENSOR_MAG) && STATE(COMPASS_CALIBRATED)) || (STATE(FIXED_WING_LEGACY) && gpsHeadingInitialized);
 }
 
 float calculateCosTiltAngle(void)

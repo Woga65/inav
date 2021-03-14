@@ -69,36 +69,23 @@
 #define GYRO_INT_EXTI            PC4
 #define USE_MPU_DATA_READY_SIGNAL
 
-#define USE_GYRO
-#define USE_ACC
-
 #define MPU6000_CS_PIN          PA4
 #define MPU6000_SPI_BUS         BUS_SPI1
 
 #if defined(OMNIBUSF4PRO) || defined(OMNIBUSF4V3)
-  #define USE_GYRO_MPU6000
-  #define GYRO_MPU6000_ALIGN      CW270_DEG
-
-  #define USE_ACC_MPU6000
-  #define ACC_MPU6000_ALIGN       CW270_DEG
+  #define USE_IMU_MPU6000
+  #define IMU_MPU6000_ALIGN       CW270_DEG
 #else
-  #define USE_GYRO_MPU6000
-  #define GYRO_MPU6000_ALIGN      CW180_DEG
-
-  #define USE_ACC_MPU6000
-  #define ACC_MPU6000_ALIGN       CW180_DEG
+  #define USE_IMU_MPU6000
+  #define IMU_MPU6000_ALIGN       CW180_DEG
 #endif
 
 // Support for OMNIBUS F4 PRO CORNER - it has ICM20608 instead of MPU6000
 #if defined(OMNIBUSF4PRO) || defined(OMNIBUSF4V3)
   #define MPU6500_CS_PIN          MPU6000_CS_PIN
   #define MPU6500_SPI_BUS         MPU6000_SPI_BUS
-
-  #define USE_GYRO_MPU6500
-  #define GYRO_MPU6500_ALIGN      GYRO_MPU6000_ALIGN
-
-  #define USE_ACC_MPU6500
-  #define ACC_MPU6500_ALIGN       ACC_MPU6000_ALIGN
+  #define USE_IMU_MPU6500
+  #define IMU_MPU6500_ALIGN       IMU_MPU6000_ALIGN
 #endif
 
 #define USE_MAG
@@ -140,7 +127,9 @@
 #define VBUS_SENSING_PIN        PC5
 #define VBUS_SENSING_ENABLED
 
+#if defined(OMNIBUSF4PRO) || defined(OMNIBUSF4V3)
 #define USE_UART_INVERTER
+#endif
 
 #define USE_UART1
 #define UART1_RX_PIN            PA10
@@ -280,8 +269,13 @@
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
 // Number of available PWM outputs
-#define MAX_PWM_OUTPUT_PORTS    6
-#define TARGET_MOTOR_COUNT      6
+#if defined(OMNIBUSF4PRO)
+#define MAX_PWM_OUTPUT_PORTS    8
+#define TARGET_MOTOR_COUNT      8
+#else
+#define MAX_PWM_OUTPUT_PORTS    8
+#define TARGET_MOTOR_COUNT      8
+#endif
 #define USE_DSHOT
 #define USE_ESC_SENSOR
 

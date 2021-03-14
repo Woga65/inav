@@ -42,8 +42,14 @@ typedef enum rc_alias {
 
 typedef enum {
     THROTTLE_LOW = 0,
-    THROTTLE_HIGH
+    THROTTLE_HIGH,
+    COLLECTIVE_MID      //sibi
 } throttleStatus_e;
+
+typedef enum {
+    THROTTLE_STATUS_TYPE_RC = 0,
+    THROTTLE_STATUS_TYPE_COMMAND
+} throttleStatusType_e;
 
 typedef enum {
     NOT_CENTERED = 0,
@@ -52,8 +58,9 @@ typedef enum {
 
 typedef enum {
     STICK_CENTER = 0,
-    THROTTLE_THRESHOLD
-} airmodeAndAntiWindupHandlingType_e;
+    THROTTLE_THRESHOLD,
+    STICK_CENTER_ONCE
+} airmodeHandlingType_e;
 
 typedef enum {
     ROL_LO = (1 << (2 * ROLL)),
@@ -80,7 +87,7 @@ typedef struct rcControlsConfig_s {
     uint8_t yaw_deadband;                   // introduce a deadband around the stick center for yaw axis. Must be greater than zero.
     uint8_t pos_hold_deadband;              // Adds ability to adjust the Hold-position when moving the sticks (assisted mode)
     uint8_t alt_hold_deadband;              // Defines the neutral zone of throttle stick during altitude hold
-    uint16_t deadband3d_throttle;           // default throttle deadband from MIDRC
+    uint16_t mid_throttle_deadband;           // default throttle deadband from MIDRC
     uint8_t airmodeHandlingType;            // Defaults to ANTI_WINDUP triggered at sticks centered
     uint16_t airmodeThrottleThreshold;      // Throttle threshold for airmode initial activation
 } rcControlsConfig_t;
@@ -100,7 +107,7 @@ bool checkStickPosition(stickPositions_e stickPos);
 
 bool areSticksInApModePosition(uint16_t ap_mode);
 bool areSticksDeflectedMoreThanPosHoldDeadband(void);
-throttleStatus_e calculateThrottleStatus(void);
+throttleStatus_e calculateThrottleStatus(throttleStatusType_e type);
 rollPitchStatus_e calculateRollPitchCenterStatus(void);
 void processRcStickPositions(throttleStatus_e throttleStatus);
 
