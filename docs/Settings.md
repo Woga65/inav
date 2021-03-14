@@ -36,6 +36,7 @@
 | antigravity_cutoff_lpf_hz | 15 | Antigravity cutoff frequenct for Throtte filter. Antigravity is based on the difference between actual and filtered throttle input. The bigger is the difference, the bigger Antigravity gain |
 | antigravity_gain | 1 | Max Antigravity gain. `1` means Antigravity is disabled, `2` means Iterm is allowed to double during rapid throttle movements |
 | applied_defaults | 0 | Internal (configurator) hint. Should not be changed manually |
+| aux_throttle_channel |  |  |
 | baro_cal_tolerance | 150 | Baro calibration tolerance in cm. The default should allow the noisiest baro to complete calibration [cm]. |
 | baro_hardware | AUTO | Selection of baro hardware. See Wiki Sensor auto detect and hardware failure detection for more info |
 | baro_median_filter | ON | 3-point median filtering for barometer readouts. No reason to change this setting |
@@ -398,6 +399,7 @@
 | osd_time_alarm | 10 | Value above which to make the OSD flight time indicator blink (minutes) |
 | osd_units | METRIC | IMPERIAL, METRIC, UK |
 | osd_video_system | AUTO | Video system used. Possible values are `AUTO`, `PAL` and `NTSC` |
+| pid_adjust_aux_channel |  |  |
 | pid_type |  | Allows to set type of PID controller used in control loop. Possible values: `NONE`, `PID`, `PIFF`, `AUTO`. Change only in case of experimental platforms like VTOL, tailsitters, rovers, boats, etc. Airplanes should always use `PIFF` and multirotors `PID` |
 | pidsum_limit | 500 | A limitation to overall amount of correction Flight PID can request on each axis (Roll/Pitch). If when doing a hard maneuver on one axis machine looses orientation on other axis - reducing this parameter may help |
 | pidsum_limit_yaw | 400 | A limitation to overall amount of correction Flight PID can request on each axis (Yaw). If when doing a hard maneuver on one axis machine looses orientation on other axis - reducing this parameter may help |
@@ -411,6 +413,7 @@
 | pitot_scale |  |  |
 | platform_type | "MULTIROTOR" | Defines UAV platform type. Allowed values: "MULTIROTOR", "AIRPLANE", "HELICOPTER", "TRICOPTER", "ROVER", "BOAT". Currently only MULTIROTOR, AIRPLANE and TRICOPTER types are implemented |
 | pos_hold_deadband | 20 | Stick deadband in [r/c points], applied after r/c deadband and expo |
+| pwm_outputs_reversed |  |  |
 | rangefinder_hardware | NONE | Selection of rangefinder hardware. |
 | rangefinder_median_filter | OFF | 3-point median filtering for rangefinder readouts |
 | rate_accel_limit_roll_pitch | 0 | Limits acceleration of ROLL/PITCH rotation speed that can be requested by stick input. In degrees-per-second-squared. Small and powerful UAV flies great with high acceleration limit ( > 5000 dps^2 and even > 10000 dps^2). Big and heavy multirotors will benefit from low acceleration limit (~ 360 dps^2). When set correctly, it greatly improves stopping performance. Value of 0 disables limiting. |
