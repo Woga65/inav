@@ -240,7 +240,7 @@ uint32_t timerGetBaseClock(TCH_t * tch)
 
 uint32_t timerGetBaseClockHW(const timerHardware_t * timHw)
 {
-    return timerClock(timHw->tim);
+    return SystemCoreClock / timerClockDivisor(timHw->tim);
 }
 
 bool timerPWMConfigChannelDMA(TCH_t * tch, void * dmaBuffer, uint8_t dmaBufferElementSize, uint32_t dmaBufferElementCount)

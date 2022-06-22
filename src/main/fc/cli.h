@@ -17,7 +17,7 @@
 
 #pragma once
 
-extern bool cliMode;
+extern uint8_t cliMode;
 
 struct serialConfig_s;
 void cliInit(const struct serialConfig_s *serialConfig);

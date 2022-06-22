@@ -1,2 +1,1 @@
 target_stm32f765xg(FRSKYPILOT)
-target_stm32f765xg(FRSKYPILOT_LED)

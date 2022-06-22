@@ -23,7 +23,7 @@
 #include "drivers/timer.h"
 #include "drivers/pinio.h"
 
-timerHardware_t timerHardware[] = {
+const timerHardware_t timerHardware[] = {
     DEF_TIM(TIM9, CH2, PA3,  TIM_USE_PPM,      0, 0),
 
     DEF_TIM(TIM5, CH1, PA0,  TIM_USE_MC_MOTOR, 0, 0),

@@ -9,11 +9,6 @@ set_property(SOURCE alignsensor_unittest.cc PROPERTY depends
 
 set_property(SOURCE bitarray_unittest.cc PROPERTY depends "common/bitarray.c")
 
-set_property(SOURCE flight_imu_unittest.cc PROPERTY depends     "build/debug.c"
-    "common/maths.c" "common/calibration.c" "common/filter.c"
-    "drivers/accgyro/accgyro_fake.c" "flight/imu.c" "sensors/boardalignment.c"
-    "sensors/gyro.c")
-
 set_property(SOURCE maths_unittest.cc PROPERTY depends "common/maths.c")
 
 set_property(SOURCE olc_unittest.cc PROPERTY depends "common/olc.c")
@@ -32,8 +27,6 @@ set_property(SOURCE telemetry_hott_unittest.cc PROPERTY depends
 
 set_property(SOURCE time_unittest.cc PROPERTY depends "drivers/time.c")
 
-set_property(SOURCE circular_queue_unittest.cc PROPERTY depends "common/circular_queue.c")
-
 function(unit_test src)
     get_filename_component(basename ${src} NAME)
     string(REPLACE ".cc" "" name ${basename} )
@@ -48,13 +41,9 @@ function(unit_test src)
     endif()
     list(TRANSFORM deps PREPEND "${MAIN_DIR}/")
     add_executable(${name} ${src} ${deps})
-    set(gen_name ${name}_gen)
-    get_generated_files_dir(gen ${gen_name})
-    target_include_directories(${name} PRIVATE . ${MAIN_DIR} ${gen})
+    target_include_directories(${name} PRIVATE . ${MAIN_DIR})
     target_compile_definitions(${name} PRIVATE ${test_definitions})
-    target_compile_options(${name} PRIVATE -pthread -Wall -Wextra -Wno-extern-c-compat -ggdb3 -O0)
-    enable_settings(${name} ${gen_name} OUTPUTS setting_files SETTINGS_CXX g++)
-    target_sources(${name} PRIVATE ${setting_files})
+    set_target_properties(${name} PROPERTIES COMPILE_FLAGS "-pthread -Wall -Wextra -Wno-extern-c-compat -ggdb3 -O0")
     target_link_libraries(${name} gtest_main)
     gtest_discover_tests(${name})
     add_custom_target("run-${name}" "${name}" DEPENDS ${name})

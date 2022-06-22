@@ -25,7 +25,9 @@
 
 #include "platform.h"
 
-bool cliMode = false;
+uint8_t cliMode = 0;
+extern uint8_t __config_start;   // configured via linker script when building binaries.
+extern uint8_t __config_end;
 
 #include "blackbox/blackbox.h"
 
@@ -41,9 +43,7 @@ bool cliMode = false;
 #include "common/memory.h"
 #include "common/time.h"
 #include "common/typeconversion.h"
-#include "common/fp_pid.h"
 #include "programming/global_variables.h"
-#include "programming/pid.h"
 
 #include "config/config_eeprom.h"
 #include "config/feature.h"
@@ -60,12 +60,14 @@ bool cliMode = false;
 #include "drivers/io_impl.h"
 #include "drivers/osd_symbols.h"
 #include "drivers/persistent.h"
+#include "drivers/rx_pwm.h"
 #include "drivers/sdcard/sdcard.h"
 #include "drivers/sensor.h"
 #include "drivers/serial.h"
 #include "drivers/stack_check.h"
 #include "drivers/system.h"
 #include "drivers/time.h"
+#include "drivers/timer.h"
 #include "drivers/usb_msc.h"
 #include "drivers/vtx_common.h"
 
@@ -84,7 +86,6 @@ bool cliMode = false;
 #include "flight/mixer.h"
 #include "flight/pid.h"
 #include "flight/servos.h"
-#include "flight/secondary_imu.h"
 
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/beeper.h"
@@ -118,15 +119,12 @@ bool cliMode = false;
 #include "sensors/opflow.h"
 #include "sensors/sensors.h"
 #include "sensors/temperature.h"
-#ifdef USE_ESC_SENSOR
-#include "sensors/esc_sensor.h"
-#endif
 
 #include "telemetry/frsky_d.h"
 #include "telemetry/telemetry.h"
 #include "build/debug.h"
 
-#if MCU_FLASH_SIZE > 128
+#if FLASH_SIZE > 128
 #define PLAY_SOUND
 #endif
 
@@ -140,7 +138,6 @@ static uint8_t cliWriteBuffer[sizeof(*cliWriter) + 128];
 
 static char cliBuffer[64];
 static uint32_t bufferIndex = 0;
-static uint16_t cliDelayMs = 0;
 
 #if defined(USE_ASSERT)
 static void cliAssert(char *cmdline);
@@ -159,18 +156,12 @@ static const char * const featureNames[] = {
     "", "RSSI_ADC", "LED_STRIP", "DASHBOARD", "",
     "BLACKBOX", "", "TRANSPONDER", "AIRMODE",
     "SUPEREXPO", "VTX", "", "", "", "PWM_OUTPUT_ENABLE",
-    "OSD", "FW_LAUNCH", "FW_AUTOTRIM", NULL
+    "OSD", "FW_LAUNCH", NULL
 };
-
-#ifdef USE_BLACKBOX
-static const char * const blackboxIncludeFlagNames[] = {
-    "NAV_ACC", "NAV_POS", "NAV_PID", "MAG", "ACC", "ATTI", "RC_DATA", "RC_COMMAND", "MOTORS", NULL
-};
-#endif
 
 /* Sensor names (used in lookup tables for *_hardware settings and in status command output) */
 // sync with gyroSensor_e
-static const char * const gyroNames[] = { "NONE", "AUTO", "MPU6050", "MPU6000", "MPU6500", "MPU9250", "BMI160", "ICM20689", "BMI088", "ICM42605", "BMI270", "FAKE"};
+static const char * const gyroNames[] = { "NONE", "AUTO", "MPU6050", "L3G4200D", "MPU3050", "L3GD20", "MPU6000", "MPU6500", "MPU9250", "BMI160", "ICM20689", "FAKE"};
 
 // sync this with sensors_e
 static const char * const sensorTypeNames[] = {
@@ -223,9 +214,6 @@ static void cliPrint(const char *str)
 static void cliPrintLinefeed(void)
 {
     cliPrint("\r\n");
-    if (cliDelayMs) {
-        delay(cliDelayMs);
-    }
 }
 
 static void cliPrintLine(const char *str)
@@ -485,12 +473,7 @@ static void dumpPgValue(const setting_t *value, uint8_t dumpMask)
         settingGetName(value, name);
         if (dumpMask & SHOW_DEFAULTS && !equalsDefault) {
             cliPrintf(defaultFormat, name);
-            // if the craftname has a leading space, then enclose the name in quotes
-            if (strcmp(name, "name") == 0 && ((const char *)valuePointer)[0] == ' ') {
-                cliPrintf("\"%s\"", (const char *)valuePointer);
-            } else {
-                printValuePointer(value, valuePointer, 0);
-            }
+            printValuePointer(value, defaultValuePointer, 0);
             cliPrintLinefeed();
         }
         cliPrintf(format, name);
@@ -1227,10 +1210,10 @@ static void cliTempSensor(char *cmdline)
     } else {
         int16_t i;
         const char *ptr = cmdline, *label;
-        int16_t type=0, alarm_min=0, alarm_max=0;
+        int16_t type, alarm_min, alarm_max;
         bool addressValid = false;
         uint64_t address;
-        int8_t osdSymbol=0;
+        int8_t osdSymbol;
         uint8_t validArgumentCount = 0;
         i = fastA2I(ptr);
         if (i >= 0 && i < MAX_TEMP_SENSORS) {
@@ -1319,8 +1302,8 @@ static void cliSafeHomes(char *cmdline)
     } else if (sl_strcasecmp(cmdline, "reset") == 0) {
         resetSafeHomes();
     } else {
-        int32_t lat=0, lon=0;
-        bool enabled=false;
+        int32_t lat, lon;
+        bool enabled;
         uint8_t validArgumentCount = 0;
         const char *ptr = cmdline;
         int8_t i = fastA2I(ptr);
@@ -1354,8 +1337,8 @@ static void cliSafeHomes(char *cmdline)
     }
 }
 
-#endif
-#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
+#endif 
+#if defined(USE_NAV) && defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
 static void printWaypoints(uint8_t dumpMask, const navWaypoint_t *navWaypoint, const navWaypoint_t *defaultNavWaypoint)
 {
     cliPrintLinef("#wp %d %svalid", posControl.waypointCount, posControl.waypointListValid ? "" : "in"); //int8_t bool
@@ -1399,35 +1382,20 @@ static void printWaypoints(uint8_t dumpMask, const navWaypoint_t *navWaypoint, c
 
 static void cliWaypoints(char *cmdline)
 {
-#ifdef USE_MULTI_MISSION
-    static int8_t multiMissionWPCounter = 0;
-#endif
     if (isEmpty(cmdline)) {
         printWaypoints(DUMP_MASTER, posControl.waypointList, NULL);
     } else if (sl_strcasecmp(cmdline, "reset") == 0) {
         resetWaypointList();
     } else if (sl_strcasecmp(cmdline, "load") == 0) {
-        loadNonVolatileWaypointList(true);
+        loadNonVolatileWaypointList();
     } else if (sl_strcasecmp(cmdline, "save") == 0) {
         posControl.waypointListValid = false;
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             if (!(posControl.waypointList[i].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[i].action == NAV_WP_ACTION_JUMP || posControl.waypointList[i].action == NAV_WP_ACTION_RTH || posControl.waypointList[i].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[i].action == NAV_WP_ACTION_LAND || posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD)) break;
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-#ifdef USE_MULTI_MISSION
-                if (posControl.multiMissionCount == 1) {
-                    posControl.waypointCount = i + 1;
-                    posControl.waypointListValid = true;
-                    multiMissionWPCounter = 0;
-                    posControl.multiMissionCount = 0;
-                    break;
-                } else {
-                    posControl.multiMissionCount -= 1;
-                }
-#else
                 posControl.waypointCount = i + 1;
                 posControl.waypointListValid = true;
                 break;
-#endif
             }
         }
         if (posControl.waypointListValid) {
@@ -1436,17 +1404,13 @@ static void cliWaypoints(char *cmdline)
             cliShowParseError();
         }
     } else {
-        int16_t i, p1=0,p2=0,p3=0,tmp=0;
-        uint8_t action=0, flag=0;
-        int32_t lat=0, lon=0, alt=0;
+        int16_t i, p1,p2=0,p3=0,tmp;
+        uint8_t action, flag;
+        int32_t lat, lon, alt;
         uint8_t validArgumentCount = 0;
         const char *ptr = cmdline;
         i = fastA2I(ptr);
-#ifdef USE_MULTI_MISSION
-        if (i + multiMissionWPCounter >= 0 && i + multiMissionWPCounter < NAV_MAX_WAYPOINTS) {
-#else
         if (i >= 0 && i < NAV_MAX_WAYPOINTS) {
-#endif
             ptr = nextArg(ptr);
             if (ptr) {
                 action = fastA2I(ptr);
@@ -1496,30 +1460,9 @@ static void cliWaypoints(char *cmdline)
 
             if (!(validArgumentCount == 6 || validArgumentCount == 8)) {
                 cliShowParseError();
-            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST || flag == NAV_WP_FLAG_HOME)) {
+            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST)) {
                 cliShowParseError();
             } else {
-#ifdef USE_MULTI_MISSION
-                if (i + multiMissionWPCounter == 0) {
-                    posControl.multiMissionCount = 0;
-                }
-
-                posControl.waypointList[i + multiMissionWPCounter].action = action;
-                posControl.waypointList[i + multiMissionWPCounter].lat = lat;
-                posControl.waypointList[i + multiMissionWPCounter].lon = lon;
-                posControl.waypointList[i + multiMissionWPCounter].alt = alt;
-                posControl.waypointList[i + multiMissionWPCounter].p1 = p1;
-                posControl.waypointList[i + multiMissionWPCounter].p2 = p2;
-                posControl.waypointList[i + multiMissionWPCounter].p3 = p3;
-                posControl.waypointList[i + multiMissionWPCounter].flag = flag;
-
-                // Process WP entries made up of multiple successive WP missions (multiple NAV_WP_FLAG_LAST entries)
-                // Individial missions loaded at runtime, mission selected nav_waypoint_multi_mission_index
-                if (flag == NAV_WP_FLAG_LAST) {
-                    multiMissionWPCounter += i + 1;
-                    posControl.multiMissionCount += 1;
-                }
-#else
                 posControl.waypointList[i].action = action;
                 posControl.waypointList[i].lat = lat;
                 posControl.waypointList[i].lon = lon;
@@ -1528,7 +1471,6 @@ static void cliWaypoints(char *cmdline)
                 posControl.waypointList[i].p2 = p2;
                 posControl.waypointList[i].p3 = p3;
                 posControl.waypointList[i].flag = flag;
-#endif
             }
         } else {
             cliShowArgumentRangeError("wp index", 0, NAV_MAX_WAYPOINTS - 1);
@@ -1675,25 +1617,6 @@ static void cliModeColor(char *cmdline)
     }
 }
 #endif
-
-static void cliDelay(char* cmdLine) {
-    int ms = 0;
-    if (isEmpty(cmdLine)) {
-        cliDelayMs = 0;
-        cliPrintLine("CLI delay deactivated");
-        return;
-    }
-    
-    ms = fastA2I(cmdLine);
-    if (ms) {
-        cliDelayMs = ms;
-        cliPrintLinef("CLI delay set to %d ms", ms);
-
-    } else {
-        cliShowParseError();
-    }
-    
-}
 
 static void printServo(uint8_t dumpMask, const servoParam_t *servoParam, const servoParam_t *defaultServoParam)
 {
@@ -2078,118 +2001,6 @@ static void cliGvar(char *cmdline) {
     }
 }
 
-static void printPid(uint8_t dumpMask, const programmingPid_t *programmingPids, const programmingPid_t *defaultProgrammingPids)
-{
-    const char *format = "pid %d %d %d %d %d %d %d %d %d %d";
-    for (uint32_t i = 0; i < MAX_PROGRAMMING_PID_COUNT; i++) {
-        const programmingPid_t pid = programmingPids[i];
-
-        bool equalsDefault = false;
-        if (defaultProgrammingPids) {
-            programmingPid_t defaultValue = defaultProgrammingPids[i];
-            equalsDefault =
-                pid.enabled == defaultValue.enabled &&
-                pid.setpoint.type == defaultValue.setpoint.type &&
-                pid.setpoint.value == defaultValue.setpoint.value &&
-                pid.measurement.type == defaultValue.measurement.type &&
-                pid.measurement.value == defaultValue.measurement.value &&
-                pid.gains.P == defaultValue.gains.P &&
-                pid.gains.I == defaultValue.gains.I &&
-                pid.gains.D == defaultValue.gains.D &&
-                pid.gains.FF == defaultValue.gains.FF;
-
-            cliDefaultPrintLinef(dumpMask, equalsDefault, format,
-                i,
-                pid.enabled,
-                pid.setpoint.type,
-                pid.setpoint.value,
-                pid.measurement.type,
-                pid.measurement.value,
-                pid.gains.P,
-                pid.gains.I,
-                pid.gains.D,
-                pid.gains.FF
-            );
-        }
-        cliDumpPrintLinef(dumpMask, equalsDefault, format,
-            i,
-            pid.enabled,
-            pid.setpoint.type,
-            pid.setpoint.value,
-            pid.measurement.type,
-            pid.measurement.value,
-            pid.gains.P,
-            pid.gains.I,
-            pid.gains.D,
-            pid.gains.FF
-        );
-    }
-}
-
-static void cliPid(char *cmdline) {
-    char * saveptr;
-    int args[10], check = 0;
-    uint8_t len = strlen(cmdline);
-
-    if (len == 0) {
-        printPid(DUMP_MASTER, programmingPids(0), NULL);
-    } else if (sl_strncasecmp(cmdline, "reset", 5) == 0) {
-        pgResetCopy(programmingPidsMutable(0), PG_LOGIC_CONDITIONS);
-    } else {
-        enum {
-            INDEX = 0,
-            ENABLED,
-            SETPOINT_TYPE,
-            SETPOINT_VALUE,
-            MEASUREMENT_TYPE,
-            MEASUREMENT_VALUE,
-            P_GAIN,
-            I_GAIN,
-            D_GAIN,
-            FF_GAIN,
-            ARGS_COUNT
-            };
-        char *ptr = strtok_r(cmdline, " ", &saveptr);
-        while (ptr != NULL && check < ARGS_COUNT) {
-            args[check++] = fastA2I(ptr);
-            ptr = strtok_r(NULL, " ", &saveptr);
-        }
-
-        if (ptr != NULL || check != ARGS_COUNT) {
-            cliShowParseError();
-            return;
-        }
-
-        int32_t i = args[INDEX];
-        if (
-            i >= 0 && i < MAX_PROGRAMMING_PID_COUNT &&
-            args[ENABLED] >= 0 && args[ENABLED] <= 1 &&
-            args[SETPOINT_TYPE] >= 0 && args[SETPOINT_TYPE] < LOGIC_CONDITION_OPERAND_TYPE_LAST &&
-            args[SETPOINT_VALUE] >= -1000000 && args[SETPOINT_VALUE] <= 1000000 &&
-            args[MEASUREMENT_TYPE] >= 0 && args[MEASUREMENT_TYPE] < LOGIC_CONDITION_OPERAND_TYPE_LAST &&
-            args[MEASUREMENT_VALUE] >= -1000000 && args[MEASUREMENT_VALUE] <= 1000000 &&
-            args[P_GAIN] >= 0 && args[P_GAIN] <= INT16_MAX &&
-            args[I_GAIN] >= 0 && args[I_GAIN] <= INT16_MAX &&
-            args[D_GAIN] >= 0 && args[D_GAIN] <= INT16_MAX &&
-            args[FF_GAIN] >= 0 && args[FF_GAIN] <= INT16_MAX
-        ) {
-            programmingPidsMutable(i)->enabled = args[ENABLED];
-            programmingPidsMutable(i)->setpoint.type = args[SETPOINT_TYPE];
-            programmingPidsMutable(i)->setpoint.value = args[SETPOINT_VALUE];
-            programmingPidsMutable(i)->measurement.type = args[MEASUREMENT_TYPE];
-            programmingPidsMutable(i)->measurement.value = args[MEASUREMENT_VALUE];
-            programmingPidsMutable(i)->gains.P = args[P_GAIN];
-            programmingPidsMutable(i)->gains.I = args[I_GAIN];
-            programmingPidsMutable(i)->gains.D = args[D_GAIN];
-            programmingPidsMutable(i)->gains.FF = args[FF_GAIN];
-
-            cliPid("");
-        } else {
-            cliShowParseError();
-        }
-    }
-}
-
 #endif
 
 #ifdef USE_SDCARD
@@ -2271,11 +2082,6 @@ static void cliFlashInfo(char *cmdline)
     UNUSED(cmdline);
 
     const flashGeometry_t *layout = flashGetGeometry();
-    
-    if (layout->totalSize == 0) {
-        cliPrintLine("Flash not available");
-        return;
-    }
 
     cliPrintLinef("Flash sectors=%u, sectorSize=%u, pagesPerSector=%u, pageSize=%u, totalSize=%u",
             layout->sectors, layout->sectorSize, layout->pagesPerSector, layout->pageSize, layout->totalSize);
@@ -2305,13 +2111,6 @@ static void cliFlashErase(char *cmdline)
 {
     UNUSED(cmdline);
 
-    const flashGeometry_t *layout = flashGetGeometry();
-    
-    if (layout->totalSize == 0) {
-        cliPrintLine("Flash not available");
-        return;
-    }
-    
     cliPrintLine("Erasing...");
     flashfsEraseCompletely();
 
@@ -2590,95 +2389,7 @@ static void cliFeature(char *cmdline)
     }
 }
 
-#ifdef USE_BLACKBOX
-static void printBlackbox(uint8_t dumpMask, const blackboxConfig_t *config, const blackboxConfig_t *configDefault)
-{
-
-    UNUSED(configDefault);
-
-    uint32_t mask = config->includeFlags;
-
-    for (uint8_t i = 0; ; i++) {  // reenable what we want.
-        if (blackboxIncludeFlagNames[i] == NULL) {
-            break;
-        }
-
-        const char *formatOn = "blackbox %s";
-        const char *formatOff = "blackbox -%s";
-
-        if (mask & (1 << i)) {
-            cliDumpPrintLinef(dumpMask, false, formatOn, blackboxIncludeFlagNames[i]);
-            cliDefaultPrintLinef(dumpMask, false, formatOn, blackboxIncludeFlagNames[i]);
-        } else {
-            cliDumpPrintLinef(dumpMask, false, formatOff, blackboxIncludeFlagNames[i]);
-            cliDefaultPrintLinef(dumpMask, false, formatOff, blackboxIncludeFlagNames[i]);
-        }
-    }
-
-}
-
-static void cliBlackbox(char *cmdline)
-{
-    uint32_t len = strlen(cmdline);
-    uint32_t mask = blackboxConfig()->includeFlags;
-
-    if (len == 0) {
-        cliPrint("Enabled: ");
-        for (uint8_t i = 0; ; i++) {
-            if (blackboxIncludeFlagNames[i] == NULL) {
-                break;
-            }
-
-            if (mask & (1 << i))
-                cliPrintf("%s ", blackboxIncludeFlagNames[i]);
-        }
-        cliPrintLinefeed();
-    } else if (sl_strncasecmp(cmdline, "list", len) == 0) {
-        cliPrint("Available: ");
-        for (uint32_t i = 0; ; i++) {
-            if (blackboxIncludeFlagNames[i] == NULL) {
-                break;
-            }
-
-            cliPrintf("%s ", blackboxIncludeFlagNames[i]);
-        }
-        cliPrintLinefeed();
-        return;
-    } else {
-        bool remove = false;
-        if (cmdline[0] == '-') {
-            // remove feature
-            remove = true;
-            cmdline++; // skip over -
-            len--;
-        }
-
-        for (uint32_t i = 0; ; i++) {
-            if (blackboxIncludeFlagNames[i] == NULL) {
-                cliPrintErrorLine("Invalid name");
-                break;
-            }
-
-            if (sl_strncasecmp(cmdline, blackboxIncludeFlagNames[i], len) == 0) {
-
-                mask = 1 << i;
-
-                if (remove) {
-                    blackboxIncludeFlagClear(mask);
-                    cliPrint("Disabled");
-                } else {
-                    blackboxIncludeFlagSet(mask);
-                    cliPrint("Enabled");
-                }
-                cliPrintLinef(" %s", blackboxIncludeFlagNames[i]);
-                break;
-            }
-        }
-    }
-}
-#endif
-
-#if defined(BEEPER) || defined(USE_DSHOT)
+#ifdef BEEPER
 static void printBeeper(uint8_t dumpMask, const beeperConfig_t *beeperConfig, const beeperConfig_t *beeperConfigDefault)
 {
     const uint8_t beeperCount = beeperTableEntryCount();
@@ -2790,15 +2501,15 @@ static void printMap(uint8_t dumpMask, const rxConfig_t *rxConfig, const rxConfi
 static void cliMap(char *cmdline)
 {
     uint32_t len;
-    char out[5];
+    char out[MAX_MAPPABLE_RX_INPUTS + 1]; // 5 sibi? out[MAX_MAPPABLE_RX_INPUTS + 1]
 
     len = strlen(cmdline);
 
-    if (len == 4) {
+    if (len == MAX_MAPPABLE_RX_INPUTS) { // 4 sibi? len == MAX_MAPPABLE_RX_INPUTS
         // uppercase it
-        for (uint32_t i = 0; i < 4; i++)
+        for (uint32_t i = 0; i < len; i++) // 4 sibi? i < len
             cmdline[i] = sl_toupper((unsigned char)cmdline[i]);
-        for (uint32_t i = 0; i < 4; i++) {
+        for (uint32_t i = 0; i < len; i++) { // 4 sibi? i < len
             if (strchr(rcChannelLetters, cmdline[i]) && !strchr(cmdline + i + 1, cmdline[i]))
                 continue;
             cliShowParseError();
@@ -2809,7 +2520,7 @@ static void cliMap(char *cmdline)
         cliShowParseError();
     cliPrint("Map: ");
     uint32_t i;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < MAX_MAPPABLE_RX_INPUTS; i++) // 4 sibi? i < MAX_MAPPABLE_RX_INPUTS
         out[rxConfig()->rcmap[i]] = rcChannelLetters[i];
     out[i] = '\0';
     cliPrintLinef("%s", out);
@@ -2908,7 +2619,7 @@ static void cliExit(char *cmdline)
 
     *cliBuffer = '\0';
     bufferIndex = 0;
-    cliMode = false;
+    cliMode = 0;
     // incase a motor was left running during motortest, clear it here
     mixerResetDisarmedMotors();
     cliReboot();
@@ -3096,55 +2807,6 @@ static void cliBatch(char *cmdline)
 }
 #endif
 
-#ifdef USE_SECONDARY_IMU
-
-static void printImu2Status(void)
-{
-    cliPrintLinef("Secondary IMU active: %d", secondaryImuState.active);
-    cliPrintLine("Calibration status:");
-    cliPrintLinef("Sys: %d", secondaryImuState.calibrationStatus.sys);
-    cliPrintLinef("Gyro: %d", secondaryImuState.calibrationStatus.gyr);
-    cliPrintLinef("Acc: %d", secondaryImuState.calibrationStatus.acc);
-    cliPrintLinef("Mag: %d", secondaryImuState.calibrationStatus.mag);
-    cliPrintLine("Calibration gains:");
-
-    cliPrintLinef(
-        "Gyro: %d %d %d",
-        secondaryImuConfig()->calibrationOffsetGyro[X],
-        secondaryImuConfig()->calibrationOffsetGyro[Y],
-        secondaryImuConfig()->calibrationOffsetGyro[Z]
-    );
-    cliPrintLinef(
-        "Acc: %d %d %d",
-        secondaryImuConfig()->calibrationOffsetAcc[X],
-        secondaryImuConfig()->calibrationOffsetAcc[Y],
-        secondaryImuConfig()->calibrationOffsetAcc[Z]
-    );
-    cliPrintLinef(
-        "Mag: %d %d %d",
-        secondaryImuConfig()->calibrationOffsetMag[X],
-        secondaryImuConfig()->calibrationOffsetMag[Y],
-        secondaryImuConfig()->calibrationOffsetMag[Z]
-    );
-    cliPrintLinef(
-        "Radius: %d %d",
-        secondaryImuConfig()->calibrationRadiusAcc,
-        secondaryImuConfig()->calibrationRadiusMag
-    );
-}
-
-static void cliImu2(char *cmdline)
-{
-    if (sl_strcasecmp(cmdline, "fetch") == 0) {
-        secondaryImuFetchCalibration();
-        printImu2Status();
-    } else {
-        printImu2Status();
-    }
-}
-
-#endif
-
 static void cliSave(char *cmdline)
 {
     UNUSED(cmdline);
@@ -3190,13 +2852,7 @@ static void cliGet(char *cmdline)
         val = settingGet(i);
         if (settingNameContains(val, name, cmdline)) {
             cliPrintf("%s = ", name);
-            if (strcmp(name, "name") == 0) {
-                // if the craftname has a leading space, then enclose the name in quotes
-                const char * v = (const char *)settingGetValuePointer(val);
-                cliPrintf(v[0] == ' ' ? "\"%s\"" : "%s", v);
-            } else {
-                cliPrintVar(val, 0);
-            }
+            cliPrintVar(val, 0);
             cliPrintLinefeed();
             cliPrintVarRange(val);
             cliPrintLinefeed();
@@ -3254,12 +2910,7 @@ static void cliSet(char *cmdline)
             if (settingNameIsExactMatch(val, name, cmdline, variableNameLength)) {
                 const setting_type_e type = SETTING_TYPE(val);
                 if (type == VAR_STRING) {
-                    // if setting the craftname, remove any quotes around the name.  This allows leading spaces in the name
-                    if (strcmp(name, "name") == 0 && eqptr[0] == '"' && eqptr[strlen(eqptr)-1] == '"') {
-                        settingSetString(val, eqptr + 1, strlen(eqptr)-2);
-                    } else {
-                        settingSetString(val, eqptr, strlen(eqptr));
-                    }
+                    settingSetString(val, eqptr, strlen(eqptr));
                     return;
                 }
                 const setting_mode_e mode = SETTING_MODE(val);
@@ -3371,32 +3022,15 @@ static void cliStatus(char *cmdline)
     cliPrintLinef("  PCLK2  = %d MHz", clocks.PCLK2_Frequency / 1000000);
 #endif
 
-    cliPrintLinef("Sensor status: GYRO=%s, ACC=%s, MAG=%s, BARO=%s, RANGEFINDER=%s, OPFLOW=%s, GPS=%s, IMU2=%s",
+    cliPrintLinef("Sensor status: GYRO=%s, ACC=%s, MAG=%s, BARO=%s, RANGEFINDER=%s, OPFLOW=%s, GPS=%s",
         hardwareSensorStatusNames[getHwGyroStatus()],
         hardwareSensorStatusNames[getHwAccelerometerStatus()],
         hardwareSensorStatusNames[getHwCompassStatus()],
         hardwareSensorStatusNames[getHwBarometerStatus()],
         hardwareSensorStatusNames[getHwRangefinderStatus()],
         hardwareSensorStatusNames[getHwOpticalFlowStatus()],
-        hardwareSensorStatusNames[getHwGPSStatus()],
-#ifdef USE_SECONDARY_IMU
-        hardwareSensorStatusNames[getHwSecondaryImuStatus()]
-#else
-        hardwareSensorStatusNames[0]
-#endif
+        hardwareSensorStatusNames[getHwGPSStatus()]
     );
-
-#ifdef USE_ESC_SENSOR
-    uint8_t motorCount = getMotorCount();
-    if (STATE(ESC_SENSOR_ENABLED) && motorCount > 0) {
-        cliPrintLinef("ESC Temperature(s): Motor Count = %d", motorCount);
-        for (uint8_t i = 0; i < motorCount; i++) {
-            const escSensorData_t *escState = getEscTelemetry(i); //Get ESC telemetry
-            cliPrintf("ESC %d: %d\260C, ", i, escState->temperature);
-        }
-        cliPrintLinefeed();
-    }
-#endif
 
 #ifdef USE_SDCARD
     cliSdInfo(NULL);
@@ -3439,7 +3073,7 @@ static void cliStatus(char *cmdline)
 #endif
 
     cliPrintf("System load: %d", averageSystemLoadPercent);
-    const timeDelta_t pidTaskDeltaTime = getTaskDeltaTime(TASK_PID);
+    const timeDelta_t pidTaskDeltaTime = getTaskDeltaTime(TASK_GYROPID);
     const int pidRate = pidTaskDeltaTime == 0 ? 0 : (int)(1000000.0f / ((float)pidTaskDeltaTime));
     const int rxRate = getTaskDeltaTime(TASK_RX) == 0 ? 0 : (int)(1000000.0f / ((float)getTaskDeltaTime(TASK_RX)));
     const int systemRate = getTaskDeltaTime(TASK_SYSTEM) == 0 ? 0 : (int)(1000000.0f / ((float)getTaskDeltaTime(TASK_SYSTEM)));
@@ -3681,22 +3315,14 @@ static void printConfig(const char *cmdline, bool doDiff)
 
         cliPrintHashLine("gvar");
         printGvar(dumpMask, globalVariableConfigs_CopyArray, globalVariableConfigs(0));
-
-        cliPrintHashLine("pid");
-        printPid(dumpMask, programmingPids_CopyArray, programmingPids(0));
 #endif
 
         cliPrintHashLine("feature");
         printFeature(dumpMask, &featureConfig_Copy, featureConfig());
 
-#if defined(BEEPER) || defined(USE_DSHOT)
+#ifdef BEEPER
         cliPrintHashLine("beeper");
         printBeeper(dumpMask, &beeperConfig_Copy, beeperConfig());
-#endif
-
-#ifdef USE_BLACKBOX
-        cliPrintHashLine("blackbox");
-        printBlackbox(dumpMask, &blackboxConfig_Copy, blackboxConfig());
 #endif
 
         cliPrintHashLine("map");
@@ -3730,7 +3356,7 @@ static void printConfig(const char *cmdline, bool doDiff)
         printTempSensor(dumpMask, tempSensorConfig_CopyArray, tempSensorConfig(0));
 #endif
 
-#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
+#if defined(USE_NAV) && defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
         cliPrintHashLine("wp");
         printWaypoints(dumpMask, posControl.waypointList, nonVolatileWaypointList(0));
 #endif
@@ -3865,7 +3491,7 @@ const clicmd_t cmdTable[] = {
 #ifdef USE_CLI_BATCH
     CLI_COMMAND_DEF("batch", "start or end a batch of commands", "start | end", cliBatch),
 #endif
-#if defined(BEEPER) || defined(USE_DSHOT)
+#ifdef BEEPER
     CLI_COMMAND_DEF("beeper", "turn on/off beeper", "list\r\n"
             "\t<+|->[name]", cliBeeper),
 #endif
@@ -3879,7 +3505,6 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("color", "configure colors", NULL, cliColor),
     CLI_COMMAND_DEF("mode_color", "configure mode and special colors", NULL, cliModeColor),
 #endif
-    CLI_COMMAND_DEF("cli_delay", "CLI Delay", "Delay in ms", cliDelay),
     CLI_COMMAND_DEF("defaults", "reset to defaults and reboot", NULL, cliDefaults),
     CLI_COMMAND_DEF("dfu", "DFU mode on reboot", NULL, cliDfu),
     CLI_COMMAND_DEF("diff", "list configuration changes from default",
@@ -3893,11 +3518,6 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("feature", "configure features",
         "list\r\n"
         "\t<+|->[name]", cliFeature),
-#ifdef USE_BLACKBOX
-    CLI_COMMAND_DEF("blackbox", "configure blackbox fields",
-        "list\r\n"
-        "\t<+|->[name]", cliBlackbox),
-#endif
 #ifdef USE_FLASHFS
     CLI_COMMAND_DEF("flash_erase", "erase flash chip", NULL, cliFlashErase),
     CLI_COMMAND_DEF("flash_info", "show flash chip info", NULL, cliFlashInfo),
@@ -3932,9 +3552,6 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("resource", "view currently used resources", NULL, cliResource),
 #endif
     CLI_COMMAND_DEF("rxrange", "configure rx channel ranges", NULL, cliRxRange),
-#ifdef USE_SECONDARY_IMU
-    CLI_COMMAND_DEF("imu2", "Secondary IMU", NULL, cliImu2),
-#endif
 #if defined(USE_SAFE_HOME)
     CLI_COMMAND_DEF("safehome", "safe home list", NULL, cliSafeHomes),
 #endif
@@ -3952,10 +3569,6 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("gvar", "configure global variables",
         "<gvar> <default> <min> <max>\r\n"
         "\treset\r\n", cliGvar),
-
-    CLI_COMMAND_DEF("pid", "configurable PID controllers",
-        "<#> <enabled> <setpoint type> <setpoint value> <measurement type> <measurement value> <P gain> <I gain> <D gain> <FF gain>\r\n"
-        "\treset\r\n", cliPid),
 #endif
     CLI_COMMAND_DEF("set", "change setting", "[<name>=<value>]", cliSet),
     CLI_COMMAND_DEF("smix", "servo mixer",
@@ -3972,7 +3585,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("temp_sensor", "change temp sensor settings", NULL, cliTempSensor),
 #endif
     CLI_COMMAND_DEF("version", "show version", NULL, cliVersion),
-#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
+#if defined(USE_NAV) && defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE) && defined(NAV_NON_VOLATILE_WAYPOINT_CLI)
     CLI_COMMAND_DEF("wp", "waypoint list", NULL, cliWaypoints),
 #endif
 #ifdef USE_OSD
@@ -4113,7 +3726,7 @@ void cliEnter(serialPort_t *serialPort)
         return;
     }
 
-    cliMode = true;
+    cliMode = 1;
     cliPort = serialPort;
     setPrintfSerialPort(cliPort);
     cliWriter = bufWriterInit(cliWriteBuffer, sizeof(cliWriteBuffer), (bufWrite_t)serialWriteBufShim, serialPort);

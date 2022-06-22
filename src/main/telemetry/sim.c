@@ -64,6 +64,15 @@
 
 
 typedef enum  {
+    SIM_TX_FLAG                 = (1 << 0),
+    SIM_TX_FLAG_FAILSAFE        = (1 << 1),
+    SIM_TX_FLAG_GPS             = (1 << 2),
+    SIM_TX_FLAG_ACC             = (1 << 3),
+    SIM_TX_FLAG_LOW_ALT         = (1 << 4),
+    SIM_TX_FLAG_RESPONSE        = (1 << 5)
+} simTxFlags_e;
+
+typedef enum  {
     SIM_MODULE_NOT_DETECTED = 0,
     SIM_MODULE_NOT_REGISTERED,
     SIM_MODULE_REGISTERED,
@@ -115,6 +124,7 @@ static uint8_t simResponse[SIM_RESPONSE_BUFFER_SIZE + 1];
 static int atCommandStatus = SIM_AT_OK;
 static bool simWaitAfterResponse = false;
 static uint8_t readState = SIM_READSTATE_RESPONSE;
+static uint8_t transmitFlags = 0;
 static timeMs_t t_lastMessageSent = 0;
 static uint8_t lastMessageTriggeredBy = 0;
 static uint8_t simModuleState = SIM_MODULE_NOT_DETECTED;
@@ -125,10 +135,18 @@ static char* accEventDescriptions[] = { "", "HIT! ", "DROP ", "HIT " };
 static char* modeDescriptions[] = { "MAN", "ACR", "AIR", "ANG", "HOR", "ALH", "POS", "RTH", "WP", "CRS", "LAU", "FS" };
 static const char gpsFixIndicators[] = { '!', '*', ' ' };
 
+
+// XXX UNUSED
+#if 0
+static bool isGroundStationNumberDefined(void) {
+    return telemetryConfig()->simGroundStationNumber[0] != '\0';
+}
+#endif
+
 static bool checkGroundStationNumber(uint8_t* rv)
 {
     int i;
-    const char* gsn = telemetryConfig()->simGroundStationNumber;
+    const uint8_t* gsn = telemetryConfig()->simGroundStationNumber;
 
     int digitsToCheck = strlen((char*)gsn);
     if (gsn[0] == '+') {
@@ -159,7 +177,7 @@ static bool checkGroundStationNumber(uint8_t* rv)
 static void readOriginatingNumber(uint8_t* rv)
 {
     int i;
-    char* gsn = telemetryConfigMutable()->simGroundStationNumber;
+    uint8_t* gsn = telemetryConfigMutable()->simGroundStationNumber;
     if (gsn[0] != '\0')
         return;
     for (i = 0; i < 15 && rv[i] != '\"'; i++)
@@ -171,7 +189,7 @@ static void readTransmitFlags(const uint8_t* fs)
 {
     int i;
 
-    uint8_t transmitFlags = 0;
+    transmitFlags = 0;
     for (i = 0; i < SIM_N_TX_FLAGS && fs[i] != '\0'; i++) {
         switch (fs[i]) {
             case 'T': case 't':
@@ -191,8 +209,6 @@ static void readTransmitFlags(const uint8_t* fs)
             break;
         }
     }
-
-    telemetryConfigMutable()->simTransmitFlags = transmitFlags;
 }
 
 static void requestSendSMS(uint8_t trigger)
@@ -272,7 +288,7 @@ static void readSimResponse(void)
             simModuleState = SIM_MODULE_REGISTERED;
         } else {
             simModuleState = SIM_MODULE_NOT_REGISTERED;
-        }
+        }        
     } else if (responseCode == SIM_RESPONSE_CODE_CMT) {
         // +CMT: <oa>,[<alpha>],<scts>[,<tooa>,<fo>,<pid>,<dcs>,<sca>,<tosca>,<length>]<CR><LF><data>
         // +CMT: "+3581234567","","19/02/12,14:57:24+08"
@@ -287,7 +303,11 @@ static void readSimResponse(void)
 
 static int16_t getAltitudeMeters(void)
 {
+#if defined(USE_NAV)
     return getEstimatedActualPosition(Z) / 100;
+#else
+    return sensors(SENSOR_GPS) ? gpsSol.llh.alt / 100 : 0;
+#endif
 }
 
 static void transmit(void)
@@ -317,7 +337,7 @@ static void transmit(void)
     if (gpsSol.fixType != GPS_NO_FIX && FLIGHT_MODE(SIM_LOW_ALT_WARNING_MODES) && getAltitudeMeters() < telemetryConfig()->simLowAltitude)
         triggers |= SIM_TX_FLAG_LOW_ALT;
 
-    triggers &= telemetryConfig()->simTransmitFlags;
+    triggers &= transmitFlags;
 
     if (!triggers)
         return;
@@ -431,7 +451,7 @@ void handleSimTelemetry()
         break;
         case SIM_STATE_INIT_ENTER_PIN:
         sendATCommand("AT+CPIN=");
-        sendATCommand((char*)telemetryConfig()->simPin);
+        sendATCommand((char*)telemetryConfig()->simPin);        
         sendATCommand("\r");
         simTelemetryState = SIM_STATE_SET_MODES;
         break;
@@ -457,6 +477,16 @@ void handleSimTelemetry()
     }
 }
 
+// XXX UNUSED
+#if 0
+static void freeSimTelemetryPort(void)
+{
+    closeSerialPort(simPort);
+    simPort = NULL;
+    simEnabled = false;
+}
+#endif
+
 void initSimTelemetry(void)
 {
     portConfig = findSerialPortConfig(FUNCTION_TELEMETRY_SIM);
@@ -478,6 +508,7 @@ static void configureSimTelemetryPort(void)
     sim_t_stateChange = millis() + SIM_STARTUP_DELAY_MS;
     simTelemetryState = SIM_STATE_INIT;
     readState = SIM_READSTATE_RESPONSE;
+    readTransmitFlags(telemetryConfig()->simTransmitFlags);
     simEnabled = true;
 }
 

@@ -4,7 +4,7 @@
 #ifdef USE_LIGHTS
 
 
-bool lightsHardwareInit(void);
+bool lightsHardwareInit();
 void lightsHardwareSetStatus(bool status);
 
 #endif /* USE_LIGHTS */

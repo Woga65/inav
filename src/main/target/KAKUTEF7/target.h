@@ -20,7 +20,7 @@
 
 #pragma once
 
-#ifdef KAKUTEF7MINI
+#if defined (KAKUTEF7MINI) || defined (KAKUTEF7MINI_7PWM) || defined (KAKUTEF7MINI_1MOTOR_6SERVOS)
 #define TARGET_BOARD_IDENTIFIER "KF7M"
 #define USBD_PRODUCT_STRING "KakuteF7-Mini"
 #else
@@ -29,6 +29,7 @@
 #endif
 
 #define LED0                PA2
+//#define LED1                PB3
 
 #define BEEPER              PD15
 #define BEEPER_INVERTED
@@ -104,6 +105,7 @@
 #define SPI4_MISO_PIN           PE5
 #define SPI4_MOSI_PIN           PE6
 
+#define USE_OSD
 
 #ifndef KAKUTEF7HDV
 #define USE_MAX7456
@@ -111,7 +113,7 @@
 #define MAX7456_CS_PIN          SPI2_NSS_PIN
 #endif
 
-#if defined(KAKUTEF7MINI)
+#if defined(KAKUTEF7MINI) || defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS)
 #define M25P16_CS_PIN           SPI1_NSS_PIN
 #define M25P16_SPI_BUS          BUS_SPI1
 #define USE_FLASHFS
@@ -139,12 +141,12 @@
 #define USE_MAG
 #define MAG_I2C_BUS             BUS_I2C1
 #define USE_MAG_HMC5883
+#define MAG_HMC5883_ALIGN       CW180_DEG
 #define USE_MAG_QMC5883
 #define USE_MAG_MAG3110
 #define USE_MAG_IST8310
 #define USE_MAG_IST8308
 #define USE_MAG_LIS3MDL
-#define USE_MAG_MLX90393
 
 #define TEMPERATURE_I2C_BUS     BUS_I2C1
 
@@ -166,8 +168,10 @@
 #define SERIALRX_UART           SERIAL_PORT_USART6
 #define SERIALRX_PROVIDER       SERIALRX_SBUS
 
+#if !defined(KAKUTEF7MINI_7PWM) && !defined(KAKUTEF7_7PWM) && !defined(KAKUTEF7MINI_1MOTOR_6SERVOS) && !defined(KAKUTEF7_1MOTOR_6SERVOS)
 #define USE_LED_STRIP
 #define WS2811_PIN                      PD12   //TIM4_CH1
+#endif
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -177,7 +181,9 @@
 #define TARGET_IO_PORTD 0xffff
 #define TARGET_IO_PORTE 0xffff
 
+#if defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7_7PWM) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS) || defined(KAKUTEF7_1MOTOR_6SERVOS)
+#define MAX_PWM_OUTPUT_PORTS       7
+#else
 #define MAX_PWM_OUTPUT_PORTS       6
-
-#define BNO055_I2C_BUS          BUS_I2C1
+#endif
 

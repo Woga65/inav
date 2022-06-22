@@ -43,8 +43,6 @@
 #include "drivers/time.h"
 #include "drivers/vtx_common.h"
 
-#include "fc/settings.h"
-
 #include "io/serial.h"
 #include "io/vtx.h"
 #include "io/vtx_control.h"
@@ -131,8 +129,8 @@ saPowerTable_t saPowerTable[VTX_SMARTAUDIO_MAX_POWER_COUNT] = {
 
 smartAudioDevice_t saDevice = {
     .version = SA_UNKNOWN,
-    .channel = SETTING_VTX_CHANNEL_DEFAULT,
-    .power = SETTING_VTX_POWER_DEFAULT,
+    .channel = -1,
+    .power = -1,
     .mode = 0,
     .freq = 0,
     .orfreq = 0,
@@ -235,6 +233,11 @@ static void saAutobaud(void)
         // Not enough samples collected
         return;
     }
+
+#if 0
+    LOG_D(VTX, "autobaud: %d rcvd %d/%d (%d)",
+        sa_smartbaud, saStat.pktrcvd, saStat.pktsent, ((saStat.pktrcvd * 100) / saStat.pktsent)));
+#endif
 
     if (((saStat.pktrcvd * 100) / saStat.pktsent) >= 70) {
         // This is okay
@@ -487,12 +490,13 @@ static void saReceiveFramer(uint8_t c)
 
 static void saSendFrame(uint8_t *buf, int len)
 {
-    if ( (vtxConfig()->smartAudioAltSoftSerialMethod && 
-          (smartAudioSerialPort->identifier == SERIAL_PORT_SOFTSERIAL1 || smartAudioSerialPort->identifier == SERIAL_PORT_SOFTSERIAL2))
-         == false) {
-        // TBS SA definition requires that the line is low before frame is sent
-        // (for both soft and hard serial). It can be done by sending first 0x00
-        serialWrite(smartAudioSerialPort, 0x00);
+    switch (smartAudioSerialPort->identifier) {
+        case SERIAL_PORT_SOFTSERIAL1:
+        case SERIAL_PORT_SOFTSERIAL2:
+            break;
+        default:
+            serialWrite(smartAudioSerialPort, 0x00); // Generate 1st start bit
+            break;
     }
 
     for (int i = 0 ; i < len ; i++) {
@@ -502,8 +506,7 @@ static void saSendFrame(uint8_t *buf, int len)
     // XXX: Workaround for early AKK SAudio-enabled VTX bug,
     // shouldn't cause any problems with VTX with properly
     // implemented SAudio.
-	//Update: causes problem with new AKK AIO camera connected to SoftUART
-    if (vtxConfig()->smartAudioEarlyAkkWorkaroundEnable) serialWrite(smartAudioSerialPort, 0x00);
+    serialWrite(smartAudioSerialPort, 0x00);
 
     sa_lastTransmissionMs = millis();
     saStat.pktsent++;
@@ -637,6 +640,13 @@ void saSetPitFreq(uint16_t freq)
     saSetFreq(freq | SA_FREQ_SETPIT);
 }
 
+#if 0
+static void saGetPitFreq(void)
+{
+    saDoDevSetFreq(SA_FREQ_GETPIT);
+}
+#endif
+
 static bool saValidateBandAndChannel(uint8_t band, uint8_t channel)
 {
     return (band >= VTX_SMARTAUDIO_MIN_BAND && band <= VTX_SMARTAUDIO_MAX_BAND &&
@@ -677,7 +687,7 @@ bool vtxSmartAudioInit(void)
 {
     serialPortConfig_t *portConfig = findSerialPortConfig(FUNCTION_VTX_SMARTAUDIO);
     if (portConfig) {
-        portOptions_t portOptions = (vtxConfig()->smartAudioStopBits == 2 ? SERIAL_STOPBITS_2 : SERIAL_STOPBITS_1) | SERIAL_BIDIR_NOPULL;
+        portOptions_t portOptions = SERIAL_BIDIR_NOPULL;
         portOptions = portOptions | (vtxConfig()->halfDuplex ? SERIAL_BIDIR | SERIAL_BIDIR_PP : SERIAL_UNIDIR);
         smartAudioSerialPort = openSerialPort(portConfig->identifier, FUNCTION_VTX_SMARTAUDIO, NULL, NULL, 4800, MODE_RXTX, portOptions);
     }

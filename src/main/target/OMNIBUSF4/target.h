@@ -90,6 +90,7 @@
 
 #define USE_MAG
 #define MAG_I2C_BUS             I2C_EXT_BUS
+#define MAG_HMC5883_ALIGN       CW90_DEG
 #define USE_MAG_HMC5883
 #define USE_MAG_QMC5883
 #define USE_MAG_IST8310
@@ -99,7 +100,6 @@
 #define USE_MAG_AK8975
 
 #define TEMPERATURE_I2C_BUS     I2C_EXT_BUS
-#define BNO055_I2C_BUS          I2C_EXT_BUS
 
 #define USE_BARO
 
@@ -213,6 +213,7 @@
 #define SPI3_MISO_PIN           PC11
 #define SPI3_MOSI_PIN           PC12
 
+#define USE_OSD
 #define USE_MAX7456
 #define MAX7456_SPI_BUS         BUS_SPI3
 #define MAX7456_CS_PIN          PA15
@@ -258,7 +259,7 @@
   #define WS2811_PIN                   PA1
 #endif
 
-#define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
+#define DEFAULT_RX_TYPE         RX_TYPE_PPM
 #define DISABLE_RX_PWM_FEATURE
 #define DEFAULT_FEATURES        (FEATURE_TX_PROF_SEL | FEATURE_BLACKBOX | FEATURE_VBAT | FEATURE_OSD)
 
@@ -268,8 +269,13 @@
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
 // Number of available PWM outputs
-#define MAX_PWM_OUTPUT_PORTS    6
-#define TARGET_MOTOR_COUNT      6
+#if defined(OMNIBUSF4PRO)
+#define MAX_PWM_OUTPUT_PORTS    8
+#define TARGET_MOTOR_COUNT      8
+#else
+#define MAX_PWM_OUTPUT_PORTS    8
+#define TARGET_MOTOR_COUNT      8
+#endif
 #define USE_DSHOT
 #define USE_ESC_SENSOR
 
@@ -281,3 +287,5 @@
 #ifdef OMNIBUSF4PRO
 #define CURRENT_METER_SCALE   265
 #endif
+
+#define PCA9685_I2C_BUS         I2C_EXT_BUS

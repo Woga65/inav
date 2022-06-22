@@ -1,2 +1,1 @@
 target_stm32f405xg(MAMBAF405US)
-target_stm32f405xg(MAMBAF405US_I2C)

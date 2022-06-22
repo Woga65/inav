@@ -90,6 +90,9 @@
 #define WS2811_PIN                      PB8 // TIM16_CH1
 
 #define USE_RANGEFINDER
+#define USE_RANGEFINDER_HCSR04
+#define RANGEFINDER_HCSR04_TRIGGER_PIN       PA6   // RC_CH7 (PB0) - only 3.3v ( add a 1K Ohms resistor )
+#define RANGEFINDER_HCSR04_ECHO_PIN          PB1   // RC_CH8 (PB1) - only 3.3v ( add a 1K Ohms resistor )
 
 #define SENSORS_SET (SENSOR_ACC | SENSOR_BARO | SENSOR_GPS | SENSOR_MAG)
 
@@ -110,3 +113,5 @@
 #define TARGET_IO_PORTB         0xffff
 #define TARGET_IO_PORTC         (BIT(13)|BIT(14)|BIT(15))
 #define TARGET_IO_PORTF         (BIT(0)|BIT(1)|BIT(4))
+
+#define PCA9685_I2C_BUS         BUS_I2C2

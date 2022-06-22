@@ -71,7 +71,6 @@
 #define USE_BARO_BMP280
 #define USE_BARO_MS5611
 #define USE_BARO_DPS310
-#define USE_BARO_SPL06
 
 #define USE_MAG
 #define MAG_I2C_BUS             BUS_I2C1
@@ -96,6 +95,7 @@
 #define SPI2_MISO_PIN           PB14
 #define SPI2_MOSI_PIN           PB15
 
+#define USE_OSD
 #define USE_MAX7456
 #define MAX7456_SPI_BUS         BUS_SPI2
 #define MAX7456_CS_PIN          PB12
@@ -192,7 +192,5 @@
 
 #define MAX_PWM_OUTPUT_PORTS        8
 #define USE_DSHOT
+#define USE_SERIALSHOT
 #define USE_ESC_SENSOR
-
-#define BNO055_I2C_BUS          BUS_I2C1
-

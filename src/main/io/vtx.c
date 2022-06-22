@@ -36,7 +36,6 @@
 #include "fc/config.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
-#include "fc/settings.h"
 
 #include "flight/failsafe.h"
 
@@ -47,13 +46,12 @@
 PG_REGISTER_WITH_RESET_TEMPLATE(vtxSettingsConfig_t, vtxSettingsConfig, PG_VTX_SETTINGS_CONFIG, 2);
 
 PG_RESET_TEMPLATE(vtxSettingsConfig_t, vtxSettingsConfig,
-    .band = SETTING_VTX_BAND_DEFAULT,
-    .channel = SETTING_VTX_CHANNEL_DEFAULT,
-    .power = SETTING_VTX_POWER_DEFAULT,
-    .pitModeChan = SETTING_VTX_PIT_MODE_CHAN_DEFAULT,
-    .lowPowerDisarm = SETTING_VTX_LOW_POWER_DISARM_DEFAULT,
-    .maxPowerOverride = SETTING_VTX_MAX_POWER_OVERRIDE_DEFAULT,
-    .frequencyGroup = SETTING_VTX_FREQUENCY_GROUP_DEFAULT,
+    .band = VTX_SETTINGS_DEFAULT_BAND,
+    .channel = VTX_SETTINGS_DEFAULT_CHANNEL,
+    .power = VTX_SETTINGS_DEFAULT_POWER,
+    .pitModeChan = VTX_SETTINGS_DEFAULT_PITMODE_CHANNEL,
+    .lowPowerDisarm = VTX_LOW_POWER_DISARM_OFF,
+    .maxPowerOverride = 0,
 );
 
 typedef enum {

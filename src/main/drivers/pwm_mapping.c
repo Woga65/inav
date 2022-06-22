@@ -36,6 +36,7 @@
 #include "drivers/pwm_mapping.h"
 #include "drivers/serial.h"
 #include "drivers/serial_uart.h"
+//#include "drivers/rx_pwm.h"
 
 #include "sensors/rangefinder.h"
 
@@ -66,13 +67,16 @@ static const char * pwmInitErrorMsg[] = {
 };
 
 static const motorProtocolProperties_t motorProtocolProperties[] = {
-    [PWM_TYPE_STANDARD]     = { .usesHwTimer = true,    .isDSHOT = false },
-    [PWM_TYPE_ONESHOT125]   = { .usesHwTimer = true,    .isDSHOT = false },
-    [PWM_TYPE_MULTISHOT]    = { .usesHwTimer = true,    .isDSHOT = false },
-    [PWM_TYPE_BRUSHED]      = { .usesHwTimer = true,    .isDSHOT = false },
-    [PWM_TYPE_DSHOT150]     = { .usesHwTimer = true,    .isDSHOT = true },
-    [PWM_TYPE_DSHOT300]     = { .usesHwTimer = true,    .isDSHOT = true },
-    [PWM_TYPE_DSHOT600]     = { .usesHwTimer = true,    .isDSHOT = true },
+    [PWM_TYPE_STANDARD]     = { .usesHwTimer = true,    .isDSHOT = false,   .isSerialShot = false },
+    [PWM_TYPE_ONESHOT125]   = { .usesHwTimer = true,    .isDSHOT = false,   .isSerialShot = false },
+    [PWM_TYPE_ONESHOT42]    = { .usesHwTimer = true,    .isDSHOT = false,   .isSerialShot = false },
+    [PWM_TYPE_MULTISHOT]    = { .usesHwTimer = true,    .isDSHOT = false,   .isSerialShot = false },
+    [PWM_TYPE_BRUSHED]      = { .usesHwTimer = true,    .isDSHOT = false,   .isSerialShot = false },
+    [PWM_TYPE_DSHOT150]     = { .usesHwTimer = true,    .isDSHOT = true,    .isSerialShot = false },
+    [PWM_TYPE_DSHOT300]     = { .usesHwTimer = true,    .isDSHOT = true,    .isSerialShot = false },
+    [PWM_TYPE_DSHOT600]     = { .usesHwTimer = true,    .isDSHOT = true,    .isSerialShot = false },
+    [PWM_TYPE_DSHOT1200]    = { .usesHwTimer = true,    .isDSHOT = true,    .isSerialShot = false },
+    [PWM_TYPE_SERIALSHOT]   = { .usesHwTimer = false,   .isDSHOT = false,   .isSerialShot = true  },
 };
 
 pwmInitError_e getPwmInitError(void)
@@ -195,34 +199,18 @@ static bool checkPwmTimerConflicts(const timerHardware_t *timHw)
 #endif
 #endif
 
-    return false;
-}
 
-static void timerHardwareOverride(timerHardware_t * timer) {
-    if (mixerConfig()->outputMode == OUTPUT_MODE_SERVOS) {
-        
-        //Motors are rewritten as servos
-        if (timer->usageFlags & TIM_USE_MC_MOTOR) {
-            timer->usageFlags = timer->usageFlags & ~TIM_USE_MC_MOTOR;
-            timer->usageFlags = timer->usageFlags | TIM_USE_MC_SERVO;
-        }
-        if (timer->usageFlags & TIM_USE_FW_MOTOR) {
-            timer->usageFlags = timer->usageFlags & ~TIM_USE_FW_MOTOR;
-            timer->usageFlags = timer->usageFlags | TIM_USE_FW_SERVO;
-        }
-        
-    } else if (mixerConfig()->outputMode == OUTPUT_MODE_MOTORS) {
-        
-        // Servos are rewritten as motors
-        if (timer->usageFlags & TIM_USE_MC_SERVO) {
-            timer->usageFlags = timer->usageFlags & ~TIM_USE_MC_SERVO;
-            timer->usageFlags = timer->usageFlags | TIM_USE_MC_MOTOR;
-        }
-        if (timer->usageFlags & TIM_USE_FW_SERVO) {
-            timer->usageFlags = timer->usageFlags & ~TIM_USE_FW_SERVO;
-            timer->usageFlags = timer->usageFlags | TIM_USE_FW_MOTOR;
+#ifdef USE_RANGEFINDER_HCSR04
+    // HC-SR04 has a dedicated connection to FC and require two pins
+    if (rangefinderConfig()->rangefinder_hardware == RANGEFINDER_HCSR04) {
+        const rangefinderHardwarePins_t *rangefinderHardwarePins = rangefinderGetHardwarePins();
+        if (rangefinderHardwarePins && (timHw->tag == rangefinderHardwarePins->triggerTag || timHw->tag == rangefinderHardwarePins->echoTag)) {
+            return true;
         }
     }
+#endif
+
+    return false;
 }
 
 void pwmBuildTimerOutputList(timMotorServoHardware_t * timOutputs, bool isMixerUsingServos)
@@ -231,11 +219,7 @@ void pwmBuildTimerOutputList(timMotorServoHardware_t * timOutputs, bool isMixerU
     timOutputs->maxTimServoCount = 0;
 
     for (int idx = 0; idx < timerHardwareCount; idx++) {
-
-        timerHardware_t *timHw = &timerHardware[idx];
-
-        timerHardwareOverride(timHw);
-
+        const timerHardware_t *timHw = &timerHardware[idx];
         int type = MAP_TO_NONE;
 
         // Check for known conflicts (i.e. UART, LEDSTRIP, Rangefinder and ADC)
@@ -284,8 +268,7 @@ static bool motorsUseHardwareTimers(void)
 
 static bool servosUseHardwareTimers(void)
 {
-    return servoConfig()->servo_protocol == SERVO_TYPE_PWM ||
-        servoConfig()->servo_protocol == SERVO_TYPE_SBUS_PWM;
+    return servoConfig()->servo_protocol == SERVO_TYPE_PWM;
 }
 
 static void pwmInitMotors(timMotorServoHardware_t * timOutputs)

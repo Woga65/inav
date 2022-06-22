@@ -20,15 +20,17 @@
 #include <string.h>
 
 #include "platform.h"
+
 #include "build/build_config.h"
 #include "build/debug.h"
-#include "drivers/time.h"
-#include "common/utils.h"
 
-#ifdef USE_ADC
+#include "drivers/time.h"
+
 #include "drivers/io.h"
 #include "drivers/adc.h"
 #include "drivers/adc_impl.h"
+
+#include "common/utils.h"
 
 #ifndef ADC_INSTANCE
 #define ADC_INSTANCE                ADC1
@@ -55,9 +57,9 @@ static uint8_t activeChannelCount[ADCDEV_COUNT] = {0};
 
 static int adcFunctionMap[ADC_FUNCTION_COUNT];
 adc_config_t adcConfig[ADC_CHN_COUNT];  // index 0 is dummy for ADC_CHN_NONE
-volatile ADC_VALUES_ALIGNMENT(uint16_t adcValues[ADCDEV_COUNT][ADC_CHN_COUNT * ADC_AVERAGE_N_SAMPLES]);
+volatile uint16_t adcValues[ADCDEV_COUNT][ADC_CHN_COUNT * ADC_AVERAGE_N_SAMPLES];
 
-uint32_t adcChannelByTag(ioTag_t ioTag)
+uint8_t adcChannelByTag(ioTag_t ioTag)
 {
     for (uint8_t i = 0; i < ARRAYLEN(adcTagMap); i++) {
         if (ioTag == adcTagMap[i].tag)
@@ -203,12 +205,4 @@ uint16_t adcGetChannel(uint8_t channel)
     return 0;
 }
 
-#endif
-
-#else // USE_ADC
-uint16_t adcGetChannel(uint8_t channel)
-{
-    UNUSED(channel);
-    return 0;
-}
 #endif

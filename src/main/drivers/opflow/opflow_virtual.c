@@ -23,7 +23,7 @@
  */
 
 /*
- * This is a bridge driver between a sensor reader that operates at high level (i.e. on top of UART)
+ * This is a bridge driver between a sensor reader that operates at high level (on top of UART or UIB)
  */
 
 #include <stdbool.h>

@@ -17,7 +17,6 @@
 
 #include "platform.h"
 
-#include "build/debug.h"
 #include "drivers/io.h"
 #include "io_impl.h"
 

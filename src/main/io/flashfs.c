@@ -40,6 +40,8 @@
 
 static flashPartition_t *flashPartition;
 
+static flashPartition_t *flashPartition;
+
 static uint8_t flashWriteBuffer[FLASHFS_WRITE_BUFFER_SIZE];
 
 /* The position of our head and tail in the circular flash write buffer.

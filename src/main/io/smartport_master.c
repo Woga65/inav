@@ -34,8 +34,6 @@ FILE_COMPILE_FOR_SPEED
 #include "drivers/serial.h"
 #include "drivers/time.h"
 
-#include "fc/settings.h"
-
 #include "io/serial.h"
 #include "io/smartport_master.h"
 
@@ -139,8 +137,8 @@ typedef struct {
 PG_REGISTER_WITH_RESET_TEMPLATE(smartportMasterConfig_t, smartportMasterConfig, PG_SMARTPORT_MASTER_CONFIG, 0);
 
 PG_RESET_TEMPLATE(smartportMasterConfig_t, smartportMasterConfig,
-    .halfDuplex = SETTING_SMARTPORT_MASTER_HALFDUPLEX_DEFAULT,
-    .inverted = SETTING_SMARTPORT_MASTER_INVERTED_DEFAULT
+    .halfDuplex = true,
+    .inverted = false
 );
 
 static serialPort_t *smartportMasterSerialPort = NULL;
@@ -550,7 +548,7 @@ void smartportMasterHandle(timeUs_t currentTimeUs)
         return;
     }
 
-    if (!pollTimestamp || (cmpTimeUs(currentTimeUs, pollTimestamp) > MS2US(SMARTPORT_POLLING_INTERVAL))) {
+    if (!pollTimestamp || (cmpTimeUs(currentTimeUs, pollTimestamp) > SMARTPORT_POLLING_INTERVAL * 1000)) {
         if (forwardRequestCount() && (forcedPolledPhyID == -1)) { // forward next payload if there is one in queue and we are not waiting from the response of the previous one
             smartportMasterForwardNextPayload();
         } else {

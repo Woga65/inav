@@ -1,0 +1,2 @@
+target_stm32f405xg(OMNIBUSF4NANOV7)
+target_stm32f405xg(OMNIBUSF4NANOV7_PC5)

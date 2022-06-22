@@ -3,13 +3,14 @@
 
 #ifdef USE_LIGHTS
 
-#ifndef LIGHTS_OUTPUT_MODE
+#if (!defined(LIGHTS_USE_PCA9685_OUTPUT)) && (!defined(LIGHTS_OUTPUT_MODE))
     #define LIGHTS_OUTPUT_MODE IOCFG_OUT_PP
 #endif
 
+
 static IO_t lightsIO = DEFIO_IO(NONE);
 
-bool lightsHardwareInit(void)
+bool lightsHardwareInit()
 {
     lightsIO = IOGetByTag(IO_TAG(LIGHTS_PIN));
 

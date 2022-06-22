@@ -20,11 +20,7 @@
 #define USE_TARGET_CONFIG
 
 #define TARGET_BOARD_IDENTIFIER         "MBF7"
-#ifdef MAMBAF722_I2C
-#define USBD_PRODUCT_STRING             "MAMBAF722_I2C"
-#else
 #define USBD_PRODUCT_STRING             "MAMBAF722"
-#endif
 
 // ******** Board LEDs  **********************
 #define LED0                            PC15
@@ -46,34 +42,17 @@
 #define USE_IMU_MPU6000
 #define IMU_MPU6000_ALIGN               CW180_DEG
 
-// The 2022 variant of F722_I2C with MPU6500
-#define USE_IMU_MPU6500
-#define IMU_MPU6500_ALIGN               CW180_DEG
-#define MPU6500_CS_PIN                  SPI1_NSS_PIN
-#define MPU6500_SPI_BUS                 BUS_SPI1
-
+// *************** Baro **************************
 #define USE_I2C
-
-#ifdef MAMBAF722_I2C
-
-#define USE_I2C_DEVICE_1
-#define I2C1_SCL                        PB8
-#define I2C1_SDA                        PB9
-#define DEFAULT_I2C_BUS                 BUS_I2C1
-
-#else
-
 #define USE_I2C_DEVICE_2
 
 #define I2C2_SCL                        PB10        // SCL pad TX3
 #define I2C2_SDA                        PB11        // SDA pad RX3
 #define DEFAULT_I2C_BUS                 BUS_I2C2
 
-#endif
-
-// *************** Baro **************************
 #define USE_BARO
 #define BARO_I2C_BUS                    DEFAULT_I2C_BUS
+
 #define USE_BARO_BMP280
 #define USE_BARO_MS5611
 
@@ -83,8 +62,6 @@
 
 #define USE_MAG_HMC5883
 #define USE_MAG_QMC5883
-#define USE_MAG_IST8310
-#define USE_MAG_MAG3110
 #define USE_MAG_LIS3MDL
 
 // ******* SERIAL ********
@@ -95,6 +72,7 @@
 #define USE_UART4
 #define USE_UART5
 #define USE_UART6
+#define USE_SOFTSERIAL1
 
 #define UART1_TX_PIN                    PB6
 #define UART1_RX_PIN                    PB7
@@ -114,19 +92,10 @@
 #define UART6_TX_PIN                    PC6
 #define UART6_RX_PIN                    PC7
 
-#ifdef MAMBAF722_I2C
-
-#define SERIAL_PORT_COUNT               7
-
-#else
-
-#define USE_SOFTSERIAL1
-
 #define SOFTSERIAL_1_TX_PIN             PA2
 #define SOFTSERIAL_1_RX_PIN             PA2
-#define SERIAL_PORT_COUNT               8
 
-#endif
+#define SERIAL_PORT_COUNT               8
 
 // ******* SPI ********
 #define USE_SPI
@@ -162,6 +131,7 @@
 #define VBAT_SCALE_DEFAULT              1100
 
 // ******* OSD ********
+#define USE_OSD
 #define USE_MAX7456
 #define MAX7456_SPI_BUS                 BUS_SPI2
 #define MAX7456_CS_PIN                  SPI2_NSS_PIN
@@ -180,14 +150,10 @@
 
 // ******* FEATURES ********
 #define DEFAULT_RX_FEATURE              FEATURE_RX_SERIAL
-#define SERIALRX_UART                   SERIAL_PORT_USART1
+#define SERIALRX_UART                   SERIAL_PORT_USART2
 #define SERIALRX_PROVIDER               SERIALRX_SBUS
 
-#ifdef MAMBAF722_I2C
-#define DEFAULT_FEATURES                (FEATURE_OSD | FEATURE_TELEMETRY)
-#else
 #define DEFAULT_FEATURES                (FEATURE_OSD | FEATURE_TELEMETRY | FEATURE_SOFTSERIAL)
-#endif
 
 #define TARGET_IO_PORTA                 0xffff
 #define TARGET_IO_PORTB                 0xffff
@@ -199,17 +165,6 @@
 
 // ESC-related features
 #define USE_DSHOT
+#define USE_SERIALSHOT
 #define USE_ESC_SENSOR
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
-
-#ifdef MAMBAF722_I2C
-
-#define USE_RANGEFINDER
-#define RANGEFINDER_I2C_BUS         DEFAULT_I2C_BUS
-#define TEMPERATURE_I2C_BUS         DEFAULT_I2C_BUS
-#define PITOT_I2C_BUS               DEFAULT_I2C_BUS
-
-#define BNO055_I2C_BUS              DEFAULT_I2C_BUS
-
-#endif
-

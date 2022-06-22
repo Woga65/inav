@@ -1,8 +1,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "platform.h"
-
 #include "common/string_light.h"
 #include "common/utils.h"
 

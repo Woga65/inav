@@ -40,7 +40,6 @@
 static flashPartitionTable_t flashPartitionTable;
 static int flashPartitions = 0;
 
-
 #ifdef USE_SPI
 static bool flashSpiInit(void)
 {
@@ -89,6 +88,29 @@ void flashEraseCompletely(void)
     return m25p16_eraseCompletely();
 #endif
 }
+
+#if 0
+void flashPageProgramBegin(uint32_t address)
+{
+#ifdef USE_FLASH_M25P16
+    return m25p16_pageProgramBegin(address);
+#endif
+}
+
+void flashPageProgramContinue(const uint8_t *data, int length)
+{
+#ifdef USE_FLASH_M25P16
+    return m25p16_pageProgramContinue(data, length);
+#endif
+}
+
+void flashPageProgramFinish(void)
+{
+#ifdef USE_FLASH_M25P16
+    return m25p16_pageProgramFinish();
+#endif
+}
+#endif
 
 uint32_t flashPageProgram(uint32_t address, const uint8_t *data, int length)
 {
@@ -163,25 +185,17 @@ static void flashConfigurePartitions(void)
     }
 
 #if defined(FIRMWARE_SIZE)
-    createPartition(FLASH_PARTITION_TYPE_FIRMWARE, FIRMWARE_SIZE * 1024, &endSector);
+    createPartition(FLASH_PARTITION_TYPE_FIRMWARE, FIRMWARE_SIZE*1024, &endSector);
 #endif
 
 #if defined(MSP_FIRMWARE_UPDATE)
     createPartition(FLASH_PARTITION_TYPE_FIRMWARE_UPDATE_META, flashGeometry->sectorSize, &endSector);
-    createPartition(FLASH_PARTITION_TYPE_UPDATE_FIRMWARE, MCU_FLASH_SIZE * 1024, &endSector);
-    createPartition(FLASH_PARTITION_TYPE_FULL_BACKUP, MCU_FLASH_SIZE * 1024, &endSector);
+    createPartition(FLASH_PARTITION_TYPE_UPDATE_FIRMWARE, FLASH_SIZE*1024, &endSector);
+    createPartition(FLASH_PARTITION_TYPE_FULL_BACKUP, FLASH_SIZE*1024, &endSector);
 #endif
 
 #if defined(CONFIG_IN_EXTERNAL_FLASH)
-    uint32_t configSize = EEPROM_SIZE;
-    flashSector_t configSectors = (configSize / flashGeometry->sectorSize);
-
-    if (configSize % flashGeometry->sectorSize > 0) {
-        configSectors++; // needs a portion of a sector.
-    }
-    configSize = configSectors * flashGeometry->sectorSize;
-
-    createPartition(FLASH_PARTITION_TYPE_CONFIG, configSize, &endSector);
+    createPartition(FLASH_PARTITION_TYPE_CONFIG, EEPROM_SIZE, &endSector);
 #endif
 
 #ifdef USE_FLASHFS

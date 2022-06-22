@@ -22,7 +22,7 @@
 #include "drivers/pwm_mapping.h"
 #include "drivers/timer.h"
 
-timerHardware_t timerHardware[] = {
+const timerHardware_t timerHardware[] = {
     // PPM / UART2 RX
     DEF_TIM(TIM8,  CH1, PA15, TIM_USE_PPM,                       0), // PPM
 

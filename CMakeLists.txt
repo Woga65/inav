@@ -22,14 +22,6 @@ endif()
 
 option(COMPILER_VERSION_CHECK "Ensure the compiler matches the expected version" ON)
 
-include(GetGitRevisionDescription)
-get_git_head_revision(GIT_REFSPEC GIT_SHA1)
-string(SUBSTRING ${GIT_SHA1} 0 8 GIT_REV)
-
-# Load settings related functions, so the tests can use them
-include(main)
-include(settings)
-
 if(TOOLCHAIN STREQUAL none)
     add_subdirectory(src/test)
 else()
@@ -37,7 +29,7 @@ else()
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/${TOOLCHAIN}-checks.cmake")
 endif()
 
-project(INAV VERSION 5.0.0)
+project(INAV VERSION 2.6.1)
 
 enable_language(ASM)
 
@@ -57,19 +49,19 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebI
     set(IS_RELEASE_BUILD ON)
 endif()
 
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+string(SUBSTRING ${GIT_SHA1} 0 8 GIT_REV)
+
 set(FIRMWARE_VERSION ${PROJECT_VERSION})
 
 option(WARNINGS_AS_ERRORS "Make all warnings into errors")
 message("-- toolchain: ${TOOLCHAIN}, WARNINGS_AS_ERRORS: ${WARNINGS_AS_ERRORS}")
 
-set(COMMON_COMPILE_DEFINITIONS
-    FC_VERSION_MAJOR=${CMAKE_PROJECT_VERSION_MAJOR}
-    FC_VERSION_MINOR=${CMAKE_PROJECT_VERSION_MINOR}
-    FC_VERSION_PATCH_LEVEL=${CMAKE_PROJECT_VERSION_PATCH}
-)
-
+include(settings)
 include(openocd)
 include(svd)
+include(main)
 include(stm32)
 
 add_subdirectory(src)

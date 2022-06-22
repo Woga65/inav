@@ -1081,7 +1081,7 @@ SD_Error_t SD_GetStatus(void)
         }
     }
     else {
-        ErrorState = SD_ERROR;
+        ErrorState = SD_CARD_ERROR;
     }
 
     return ErrorState;

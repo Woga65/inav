@@ -36,10 +36,7 @@ class Compiler
         # on Windows if PATH contains spaces.
         #dirs = ((ENV["CPP_PATH"] || "") + File::PATH_SEPARATOR + (ENV["PATH"] || "")).split(File::PATH_SEPARATOR)
         dirs = ((ENV["CPP_PATH"] || "") + File::PATH_SEPARATOR + (ENV["PATH"] || "")).split(File::PATH_SEPARATOR)
-        bin = ENV["SETTINGS_CXX"]
-        if bin.empty?
-            bin = "arm-none-eabi-g++"
-        end
+        bin = "arm-none-eabi-g++"
         dirs.each do |dir|
             p = File.join(dir, bin)
             ['', '.exe'].each do |suffix|

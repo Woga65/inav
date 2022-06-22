@@ -47,6 +47,7 @@ typedef struct uartDevice_s {
     uint32_t irqPriority;
 } uartDevice_t;
 
+//static uartPort_t uartPort[MAX_UARTS];
 #ifdef USE_UART1
 static uartDevice_t uart1 =
 {

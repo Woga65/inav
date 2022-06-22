@@ -135,11 +135,18 @@ static void benewakeRangefinderUpdate(void)
                 sensorData = (tfminiPacket->distL << 0) | (tfminiPacket->distH << 8);
                 lastProtocolActivityMs = millis();
 
-                uint16_t qual = (tfminiPacket->strengthL << 0) | (tfminiPacket->strengthH << 8);
+                int32_t qual = (tfminiPacket->strengthL << 0) | (tfminiPacket->strengthH << 8);
 
+//                if (sensorData == -1 || sensorData == -4) {       //TFmini-S (-1 ==> strength < 100 | -4 ==> ambient light saturation) sibi
+//                    sensorData = -1;
+//                } else if (sensorData == -2 && qual == -1) {      //TFmini-S (Signal strenght saturation)
+//                    sensorData = 0;
+//                }
+                                    
                 if (sensorData == 0 || qual <= BENEWAKE_MIN_QUALITY) {
                     sensorData = -1;
                 }
+
             }
 
             // Prepare for new packet

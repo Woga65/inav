@@ -67,7 +67,6 @@
 #include "navigation/navigation_private.h"
 
 #include "rx/rx.h"
-#include "rx/mavlink.h"
 
 #include "sensors/acceleration.h"
 #include "sensors/barometer.h"
@@ -87,9 +86,10 @@
 
 #include "scheduler/scheduler.h"
 
+// mavlink library uses unnames unions that's causes GCC to complain if -Wpedantic is used
+// until this is resolved in mavlink library - ignore -Wpedantic for mavlink code
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#define MAVLINK_COMM_NUM_BUFFERS 1
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "common/mavlink.h"
 #pragma GCC diagnostic pop
 
@@ -97,11 +97,6 @@
 #define TELEMETRY_MAVLINK_MAXRATE       50
 #define TELEMETRY_MAVLINK_DELAY         ((1000 * 1000) / TELEMETRY_MAVLINK_MAXRATE)
 
-/**
- * MAVLink requires angles to be in the range -Pi..Pi.
- * This converts angles from a range of 0..Pi to -Pi..Pi
- */
-#define RADIANS_TO_MAVLINK_RANGE(angle) (angle > M_PIf) ? angle - (2 * M_PIf) : angle
 
 /** @brief A mapping of plane flight modes for custom_mode field of heartbeat. */
 typedef enum APM_PLANE_MODE
@@ -327,14 +322,6 @@ void checkMAVLinkTelemetryState(void)
 static void mavlinkSendMessage(void)
 {
     uint8_t mavBuffer[MAVLINK_MAX_PACKET_LEN];
-
-    mavlink_status_t* chan_state = mavlink_get_channel_status(MAVLINK_COMM_0);
-    if (telemetryConfig()->mavlink.version == 1) {
-        chan_state->flags |= MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
-    } else {
-        chan_state->flags &= ~MAVLINK_STATUS_FLAG_OUT_MAVLINK1;
-    }
-
     int msgLength = mavlink_msg_to_send_buffer(mavBuffer, &mavSendMsg);
 
     for (int i = 0; i < msgLength; i++) {
@@ -346,7 +333,7 @@ void mavlinkSendSystemStatus(void)
 {
     // Receiver is assumed to be always present
     uint32_t onboard_control_sensors_present    = (MAV_SYS_STATUS_SENSOR_RC_RECEIVER);
-    // GYRO and RC are assumed as minimum requirements
+    // GYRO and RC are assumed as minimium requirements
     uint32_t onboard_control_sensors_enabled    = (MAV_SYS_STATUS_SENSOR_3D_GYRO | MAV_SYS_STATUS_SENSOR_RC_RECEIVER);
     uint32_t onboard_control_sensors_health     = 0;
 
@@ -510,9 +497,8 @@ void mavlinkSendRCChannelsAndRSSI(void)
         GET_CHANNEL_VALUE(6),
         // chan8_raw RC channel 8 value, in microseconds
         GET_CHANNEL_VALUE(7),
-        // rssi Receive signal strength indicator, 0: 0%, 254: 100%
-		//https://github.com/mavlink/mavlink/issues/1027
-        scaleRange(getRSSI(), 0, 1023, 0, 254));
+        // rssi Receive signal strength indicator, 0: 0%, 255: 100%
+        scaleRange(getRSSI(), 0, 1023, 0, 255));
 #undef GET_CHANNEL_VALUE
 
     mavlinkSendMessage();
@@ -553,19 +539,7 @@ void mavlinkSendPosition(timeUs_t currentTimeUs)
         // cog Course over ground (NOT heading, but direction of movement) in degrees * 100, 0.0..359.99 degrees. If unknown, set to: 65535
         gpsSol.groundCourse * 10,
         // satellites_visible Number of satellites visible. If unknown, set to 255
-        gpsSol.numSat,
-        // alt_ellipsoid Altitude (above WGS84, EGM96 ellipsoid). Positive for up
-        0,
-        // h_acc Position uncertainty in mm,
-        gpsSol.eph * 10,
-        // v_acc Altitude uncertainty in mm,
-        gpsSol.epv * 10,
-        // vel_acc Speed uncertainty in mm (??)
-        0,
-        // hdg_acc Heading uncertainty in degE5
-        0,
-        // yaw Yaw in earth frame from north. Use 0 if this GPS does not provide yaw. Use 65535 if this GPS is configured to provide yaw and is currently unable to provide it. Use 36000 for north.
-        0);
+        gpsSol.numSat);
 
     mavlinkSendMessage();
 
@@ -580,7 +554,11 @@ void mavlinkSendPosition(timeUs_t currentTimeUs)
         // alt Altitude in 1E3 meters (millimeters) above MSL
         gpsSol.llh.alt * 10,
         // relative_alt Altitude above ground in meters, expressed as * 1000 (millimeters)
+#if defined(USE_NAV)
         getEstimatedActualPosition(Z) * 10,
+#else
+        gpsSol.llh.alt * 10,
+#endif
         // [cm/s] Ground X Speed (Latitude, positive north)
         getEstimatedActualVelocity(X),
         // [cm/s] Ground Y Speed (Longitude, positive east)
@@ -599,10 +577,7 @@ void mavlinkSendPosition(timeUs_t currentTimeUs)
         // longitude Longitude (WGS84), expressed as * 1E7
         GPS_home.lon,
         // altitude Altitude(WGS84), expressed as * 1000
-        GPS_home.alt * 10, // FIXME
-        // time_usec Timestamp (microseconds since system boot)
-        // Use millis() * 1000 as micros() will overflow after 1.19 hours.
-        ((uint64_t) millis()) * 1000);
+        GPS_home.alt * 10); // FIXME
 
     mavlinkSendMessage();
 }
@@ -614,17 +589,17 @@ void mavlinkSendAttitude(void)
         // time_boot_ms Timestamp (milliseconds since system boot)
         millis(),
         // roll Roll angle (rad)
-        RADIANS_TO_MAVLINK_RANGE(DECIDEGREES_TO_RADIANS(attitude.values.roll)),
+        DECIDEGREES_TO_RADIANS(attitude.values.roll),
         // pitch Pitch angle (rad)
-        RADIANS_TO_MAVLINK_RANGE(DECIDEGREES_TO_RADIANS(-attitude.values.pitch)),
+        DECIDEGREES_TO_RADIANS(-attitude.values.pitch),
         // yaw Yaw angle (rad)
-        RADIANS_TO_MAVLINK_RANGE(DECIDEGREES_TO_RADIANS(attitude.values.yaw)),
+        DECIDEGREES_TO_RADIANS(attitude.values.yaw),
         // rollspeed Roll angular speed (rad/s)
-        gyro.gyroADCf[FD_ROLL],
+        0,
         // pitchspeed Pitch angular speed (rad/s)
-        gyro.gyroADCf[FD_PITCH],
+        0,
         // yawspeed Yaw angular speed (rad/s)
-        gyro.gyroADCf[FD_YAW]);
+        0);
 
     mavlinkSendMessage();
 }
@@ -650,9 +625,17 @@ void mavlinkSendHUDAndHeartbeat(void)
 #endif
 
     // select best source for altitude
+#if defined(USE_NAV)
     mavAltitude = getEstimatedActualPosition(Z) / 100.0f;
     mavClimbRate = getEstimatedActualVelocity(Z) / 100.0f;
+#elif defined(USE_GPS)
+    if (sensors(SENSOR_GPS)) {
+        // No surface or baro, just display altitude above MLS
+        mavAltitude = gpsSol.llh.alt;
+    }
+#endif
 
+    
     int16_t thr = rxGetChannelValue(THROTTLE);
     if (navigationIsControllingThrottle()) {
         thr = rcCommand[THROTTLE];
@@ -730,7 +713,7 @@ void mavlinkSendHUDAndHeartbeat(void)
             mavSystemState = MAV_STATE_ACTIVE;
         }
     }
-    else if (areSensorsCalibrating()) {
+    else if (isCalibrating()) {
         mavSystemState = MAV_STATE_CALIBRATING;
     }
     else {
@@ -755,18 +738,12 @@ void mavlinkSendHUDAndHeartbeat(void)
 void mavlinkSendBatteryTemperatureStatusText(void)
 {
     uint16_t batteryVoltages[MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN];
-    uint16_t batteryVoltagesExt[MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_EXT_LEN];
     memset(batteryVoltages, UINT16_MAX, sizeof(batteryVoltages));
-    memset(batteryVoltagesExt, 0, sizeof(batteryVoltagesExt));
     if (feature(FEATURE_VBAT)) {
         uint8_t batteryCellCount = getBatteryCellCount();
         if (batteryCellCount > 0) {
-            for (int cell=0; cell < batteryCellCount && cell < MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN + MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_EXT_LEN; cell++) {
-                if (cell < MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN) {
-                    batteryVoltages[cell] = getBatteryAverageCellVoltage() * 10;
-                } else {
-                    batteryVoltagesExt[cell-MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN] = getBatteryAverageCellVoltage() * 10;
-                }
+            for (int cell=0; (cell < batteryCellCount) && (cell < MAVLINK_MSG_BATTERY_STATUS_FIELD_VOLTAGES_LEN); cell++) {
+                batteryVoltages[cell] = getBatteryAverageCellVoltage() * 10;
             }
         }
         else {
@@ -795,17 +772,7 @@ void mavlinkSendBatteryTemperatureStatusText(void)
         // energy_consumed Consumed energy, in 100*Joules (intergrated U*I*dt)  (1 = 100 Joule), -1: autopilot does not provide energy consumption estimate
         isAmperageConfigured() ? getMWhDrawn()*36 : -1,
         // battery_remaining Remaining battery energy: (0%: 0, 100%: 100), -1: autopilot does not estimate the remaining battery);
-        feature(FEATURE_VBAT) ? calculateBatteryPercentage() : -1,
-        // time_remaining Remaining battery time, 0: autopilot does not provide remaining battery time estimate
-        0, // TODO this could easily be implemented
-        // charge_state State for extent of discharge, provided by autopilot for warning or external reactions
-        0,
-        // voltages_ext Battery voltages for cells 11 to 14. Cells above the valid cell count for this battery should have a value of 0, where zero indicates not supported (note, this is different than for the voltages field and allows empty byte truncation). If the measured value is 0 then 1 should be sent instead.
-        batteryVoltagesExt,
-        // mode Battery mode. Default (0) is that battery mode reporting is not supported or battery is in normal-use mode.
-        0,
-        // fault_bitmask Fault/health indications. These should be set when charge_state is MAV_BATTERY_CHARGE_STATE_FAILED or MAV_BATTERY_CHARGE_STATE_UNHEALTHY (if not, fault reporting is not supported).
-        0);
+        feature(FEATURE_VBAT) ? calculateBatteryPercentage() : -1);
 
     mavlinkSendMessage();
 
@@ -816,8 +783,7 @@ void mavlinkSendBatteryTemperatureStatusText(void)
         millis(),
         0,
         0,
-        temperature * 10,
-        0);
+        temperature * 10);
 
     mavlinkSendMessage();
 
@@ -836,9 +802,7 @@ void mavlinkSendBatteryTemperatureStatusText(void)
 
         mavlink_msg_statustext_pack(mavSystemId, mavComponentId, &mavSendMsg,
             (uint8_t)severity,
-            buff,
-            0,
-            0);
+            buff);
 
         mavlinkSendMessage();
     }
@@ -886,7 +850,7 @@ static bool handleIncoming_MISSION_CLEAR_ALL(void)
     // Check if this message is for us
     if (msg.target_system == mavSystemId) {
         resetWaypointList();
-        mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ACCEPTED, MAV_MISSION_TYPE_MISSION);
+        mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ACCEPTED);
         mavlinkSendMessage();
         return true;
     }
@@ -908,17 +872,17 @@ static bool handleIncoming_MISSION_COUNT(void)
         if (msg.count <= NAV_MAX_WAYPOINTS) {
             incomingMissionWpCount = msg.count; // We need to know how many items to request
             incomingMissionWpSequence = 0;
-            mavlink_msg_mission_request_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, incomingMissionWpSequence, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_request_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, incomingMissionWpSequence);
             mavlinkSendMessage();
             return true;
         }
         else if (ARMING_FLAG(ARMED)) {
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ERROR, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ERROR);
             mavlinkSendMessage();
             return true;
         }
         else {
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_NO_SPACE, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_NO_SPACE);
             mavlinkSendMessage();
             return true;
         }
@@ -936,19 +900,19 @@ static bool handleIncoming_MISSION_ITEM(void)
     if (msg.target_system == mavSystemId) {
         // Check supported values first
         if (ARMING_FLAG(ARMED)) {
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ERROR, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ERROR);
             mavlinkSendMessage();
             return true;
         }
 
         if ((msg.autocontinue == 0) || (msg.command != MAV_CMD_NAV_WAYPOINT && msg.command != MAV_CMD_NAV_RETURN_TO_LAUNCH)) {
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_UNSUPPORTED, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_UNSUPPORTED);
             mavlinkSendMessage();
             return true;
         }
 
         if ((msg.frame != MAV_FRAME_GLOBAL_RELATIVE_ALT) && !(msg.frame == MAV_FRAME_MISSION && msg.command == MAV_CMD_NAV_RETURN_TO_LAUNCH)) {
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_UNSUPPORTED_FRAME, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_UNSUPPORTED_FRAME);
             mavlinkSendMessage();
             return true;
         }
@@ -970,22 +934,22 @@ static bool handleIncoming_MISSION_ITEM(void)
 
             if (incomingMissionWpSequence >= incomingMissionWpCount) {
                 if (isWaypointListValid()) {
-                    mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ACCEPTED, MAV_MISSION_TYPE_MISSION);
+                    mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_ACCEPTED);
                     mavlinkSendMessage();
                 }
                 else {
-                    mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_INVALID, MAV_MISSION_TYPE_MISSION);
+                    mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_INVALID);
                     mavlinkSendMessage();
                 }
             }
             else {
-                mavlink_msg_mission_request_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, incomingMissionWpSequence, MAV_MISSION_TYPE_MISSION);
+                mavlink_msg_mission_request_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, incomingMissionWpSequence);
                 mavlinkSendMessage();
             }
         }
         else {
             // Wrong sequence number received
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_INVALID_SEQUENCE, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_INVALID_SEQUENCE);
             mavlinkSendMessage();
         }
 
@@ -1002,7 +966,7 @@ static bool handleIncoming_MISSION_REQUEST_LIST(void)
 
     // Check if this message is for us
     if (msg.target_system == mavSystemId) {
-        mavlink_msg_mission_count_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, getWaypointCount(), MAV_MISSION_TYPE_MISSION);
+        mavlink_msg_mission_count_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, getWaypointCount());
         mavlinkSendMessage();
         return true;
     }
@@ -1032,12 +996,11 @@ static bool handleIncoming_MISSION_REQUEST(void)
                         0, 0, 0, 0,
                         wp.lat / 1e7f,
                         wp.lon / 1e7f,
-                        wp.alt / 100.0f,
-                        MAV_MISSION_TYPE_MISSION);
+                        wp.alt / 100.0f);
             mavlinkSendMessage();
         }
         else {
-            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_INVALID_SEQUENCE, MAV_MISSION_TYPE_MISSION);
+            mavlink_msg_mission_ack_pack(mavSystemId, mavComponentId, &mavSendMsg, mavRecvMsg.sysid, mavRecvMsg.compid, MAV_MISSION_INVALID_SEQUENCE);
             mavlinkSendMessage();
         }
 
@@ -1045,14 +1008,6 @@ static bool handleIncoming_MISSION_REQUEST(void)
     }
 
     return false;
-}
-
-static bool handleIncoming_RC_CHANNELS_OVERRIDE(void) {
-    mavlink_rc_channels_override_t msg;
-    mavlink_msg_rc_channels_override_decode(&mavRecvMsg, &msg);
-    // Don't check system ID because it's not configurable with systems like Crossfire
-    mavlinkRxHandleMessage(&msg);
-    return true;
 }
 
 static bool processMAVLinkIncomingTelemetry(void)
@@ -1075,8 +1030,6 @@ static bool processMAVLinkIncomingTelemetry(void)
                     return handleIncoming_MISSION_REQUEST_LIST();
                 case MAVLINK_MSG_ID_MISSION_REQUEST:
                     return handleIncoming_MISSION_REQUEST();
-                case MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE:
-                    return handleIncoming_RC_CHANNELS_OVERRIDE();
                 default:
                     return false;
             }
@@ -1111,6 +1064,8 @@ void handleMAVLinkTelemetry(timeUs_t currentTimeUs)
         lastMavlinkMessage = currentTimeUs;
         incomingRequestServed = false;
     }
+
+
 }
 
 #endif

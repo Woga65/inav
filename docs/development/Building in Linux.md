@@ -30,8 +30,6 @@ Note that inav requires `cmake` version 3.13 or later; any distro that provides 
 
 Note also that Ubuntu 18.04 LTS does NOT provide a modern enough `cmake`; it is recommended that you upgrade to Ubuntu 20.04 LTS which does.
 
-Note that you may prefer to use `ninja` rather than `make` as the build manager. This is described [below](#building-with-ninja).
-
 ### Ubuntu / Debian
 ```
 # make sure the system is updated first
@@ -67,11 +65,11 @@ The `git clone` creates an `inav` directory; we can enter this directory, config
 
 ## Build tooling
 
-For 2.6 and later, inav uses `cmake` as its primary build tool. `cmake` simplifies various platform and hardware dependencies required to cross compile multiple targets. `cmake` still uses GNU `make` to invoke the actual compiler. It is necessary to configure the build environment with `cmake` before we can build any firmware.
+For 2.6 and later, inav uses `cmake` as its primary build tool. `cmake` simplies various platform and hardware dependencies required to cross compile multiple targets. `cmake` still uses GNU `make` to invoke the actual compiler. It is necessary to configure the build enviroment with `cmake` before we can build any firmware.
 
 ## Using `cmake`
 
-The canonical method of using `cmake` is to create a `build` directory and run the `cmake` and `make` commands from within the `build` directory. So, assuming we've cloned the firmware repository into an `inav` directory, we can issue the following commands to set up the build environment.
+The canonanical method of using `cmake` is to create a `build` directory and run the `cmake` and `make` commands from within the `build` directory. So, assuming we've cloned the firmware repository into an `inav` directory, we can issue the following commands to set up the build environment.
 
 ```
 cd inav
@@ -98,18 +96,17 @@ Once `cmake` has generated the `build/Makefile`, this `Makfile` (with `make`) is
 
 The generated `Makefile` uses different a target selection mechanism from the older (pre 2.6) top level `Makefile`; you can generate a list of targets with `make help` (or, as the list is extremely long), pipe this into a pager, e.g. `make help | less`.
 
-Typically, to build a single target, just pass the target name to `make`; note that unlike earlier releases, `make` without a target specified will build **all** targets.
+Typically, to build a single target, just pass the target name to `make`; note that unlike eariler releases, `make` without a target specified will build **all** targets.
 
 ```
 # Build the MATEKF405 firmware
 make MATEKF405
 ```
 
-One can also build multiple targets from a single `make` command:
+One can also build multiple targets from a sinlge `make` command:
 
 ```
-# parallel build using all but 1 CPU core
-make -j $(($(nproc)-1)) MATEKF405 MATEKF722
+make MATEKF405 MATEKF722
 ```
 
 The resultant hex file are in the `build` directory.
@@ -131,7 +128,7 @@ make clean_MATEKF405
 make clean_MATEKF405  clean_MATEKF722
 ```
 
-### `cmake` cache maintenance
+### `cmake` cache maintainance
 
 `cmake` caches the build environment, so you don't need to rerun `cmake` each time you build a target. Two `make` options are provided to maintain the `cmake` cache.
 
@@ -140,46 +137,20 @@ make clean_MATEKF405  clean_MATEKF722
 
 It is unlikely that the typical user will need to employ these options, other than perhaps to change between the embedded ARM and distro compilers.
 
-## Building with ninja
-
-`cmake` is not a build system, rather it generates build files for a build manager. The examples above use `make` as the build manager; this has been the legacy way of building inav. It is also possible to use other build systems; one popular cross-platform tool is [ninja](https://ninja-build.org/) which is both lightweight and executes parallel builds by default.
-
-* Install `ninja` from the distro tool (apt, dnf, pacman as appropriate)
-* Configure `cmake` to use `ninja` as the build system
-
-  ```
-  cd buid
-  # add other cmake options as required.
-  cmake -GNinja ..
-  ```
-
-* Then use `ninja` in place of `make` to perform the build
-
-  ```
-  ninja MATEKF405 MATEKF722
-  ```
-
 ## Updating and rebuilding
 
 In order to update your local firmware build:
 
-* Navigate to the local inav repository
+* Navigate to the local iNav repository
 * Use the following steps to pull the latest changes and rebuild your local version of inav firmware from the `build` directory:
 
 ```
 $ cd inav
 $ git pull
 $ cd build
-$ ninja <TARGET>
-$ ## or make <TARGET>
+$ make <TARGET>
 ```
 
 ## Advanced Usage
 
 For more advanced development information and `git` usage, please refer to the [development guide](https://github.com/iNavFlight/inav/blob/master/docs/development/Development.md).
-
-## Unsupported platforms
-
-If you're using a host platform for which Arm does not supply a cross-compiler (Arm32, IA32), and the distro either does not package a suitable compiler or it's too old, then you can usually find a suitable compiler in the [xpack devtools collection](https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack).
-
-You will need to configure `cmake` to use the external compiler.

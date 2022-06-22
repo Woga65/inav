@@ -2,7 +2,6 @@ include(stm32-bootloader)
 include(stm32f3)
 include(stm32f4)
 include(stm32f7)
-include(stm32h7)
 
 include(CMakeParseArguments)
 
@@ -189,7 +188,7 @@ endfunction()
 
 function(add_hex_target name exe hex)
     add_custom_target(${name} ALL
-        cmake -E env PATH="$ENV{PATH}"
+        cmake -E env PATH=$ENV{PATH}
         # TODO: Overriding the start address with --set-start 0x08000000
         # seems to be required due to some incorrect assumptions about .hex
         # files in the configurator. Verify wether that's the case and fix
@@ -201,7 +200,7 @@ endfunction()
 
 function(add_bin_target name exe bin)
     add_custom_target(${name}
-        cmake -E env PATH="$ENV{PATH}"
+        cmake -E env PATH=$ENV{PATH}
         ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${exe}> ${bin}
         BYPRODUCTS ${bin}
     )
@@ -304,7 +303,7 @@ function(target_stm32)
 
     set(target_include_directories ${args_INCLUDE_DIRECTORIES})
 
-    set(target_definitions ${STM32_DEFINITIONS} ${COMMON_COMPILE_DEFINITIONS})
+    set(target_definitions ${STM32_DEFINITIONS})
 
     get_stm32_target_features(features "${CMAKE_CURRENT_SOURCE_DIR}" ${name})
     set_property(TARGET ${elf_target} PROPERTY FEATURES ${features})

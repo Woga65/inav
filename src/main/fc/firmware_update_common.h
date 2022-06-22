@@ -32,18 +32,15 @@
 
 #define FIRMWARE_START_ADDRESS ((uint32_t)&__firmware_start)
 #define FLASH_START_ADDRESS 0x08000000UL
-#define FLASH_END (FLASH_START_ADDRESS + MCU_FLASH_SIZE * 1024)
+#define FLASH_END (FLASH_START_ADDRESS + FLASH_SIZE * 1024)
 #define CONFIG_START_ADDRESS ((uint32_t)&__config_start)
 #define CONFIG_END_ADDRESS ((uint32_t)&__config_end)
 
 #define AVAILABLE_FIRMWARE_SPACE (FLASH_END - FIRMWARE_START_ADDRESS)
 
 extern uint8_t __firmware_start; // set via linker
-
-#if defined(CONFIG_IN_FLASH)
 extern uint8_t __config_start;
 extern uint8_t __config_end;
-#endif
 
 typedef struct {
     uint32_t magic;

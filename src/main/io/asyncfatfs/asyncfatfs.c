@@ -435,11 +435,7 @@ typedef struct afatfs_t {
     } initState;
 #endif
 
-#ifdef STM32H7
-    uint8_t *cache;
-#else
     uint8_t cache[AFATFS_SECTOR_SIZE * AFATFS_NUM_CACHE_SECTORS];
-#endif
     afatfsCacheBlockDescriptor_t cacheDescriptor[AFATFS_NUM_CACHE_SECTORS];
     uint32_t cacheTimer;
 
@@ -484,10 +480,6 @@ typedef struct afatfs_t {
     uint32_t rootDirectoryCluster; // Present on FAT32 and set to zero for FAT16
     uint32_t rootDirectorySectors; // Zero on FAT32, for FAT16 the number of sectors that the root directory occupies
 } afatfs_t;
-
-#ifdef STM32H7
-static uint8_t afatfs_cache[AFATFS_SECTOR_SIZE * AFATFS_NUM_CACHE_SECTORS] __attribute__((aligned(32)));
-#endif
 
 static afatfs_t afatfs;
 
@@ -2601,18 +2593,8 @@ static void afatfs_createFileContinue(afatfsFile_t *file)
                                 opState->phase = AFATFS_CREATEFILE_PHASE_FAILURE;
                                 goto doMore;
                             }
-                        } else if (entry->attrib & FAT_FILE_ATTRIBUTE_VOLUME_ID) {
-                            break;
                         } else if (strncmp(entry->filename, (char*) opState->filename, FAT_FILENAME_LENGTH) == 0) {
-                            // We found a file or directory with this name!
-
-                            // Do not open file as dir or dir as file
-                            if (((entry->attrib ^ file->attrib) & FAT_FILE_ATTRIBUTE_DIRECTORY) != 0) {
-                                afatfs_findLast(&afatfs.currentDirectory);
-                                opState->phase = AFATFS_CREATEFILE_PHASE_FAILURE;
-                                goto doMore;
-                            }
-
+                            // We found a file with this name!
                             afatfs_fileLoadDirectoryEntry(file, entry);
 
                             afatfs_findLast(&afatfs.currentDirectory);
@@ -3270,7 +3252,6 @@ uint32_t afatfs_freadSync(afatfsFilePtr_t file, uint8_t *buffer, uint32_t length
         uint32_t leftToRead = length - bytesRead;
         uint32_t readNow = afatfs_fread(file, buffer, leftToRead);
         bytesRead += readNow;
-        buffer += readNow;
         if (bytesRead < length) {
 
             if (afatfs_feof(file)) {
@@ -3624,9 +3605,6 @@ afatfsError_e afatfs_getLastError(void)
 
 void afatfs_init(void)
 {
-#ifdef STM32H7
-    afatfs.cache = afatfs_cache;
-#endif
     afatfs.filesystemState = AFATFS_FILESYSTEM_STATE_INITIALIZATION;
     afatfs.initPhase = AFATFS_INITIALIZATION_READ_MBR;
     afatfs.lastClusterAllocated = FAT_SMALLEST_LEGAL_CLUSTER_NUMBER;

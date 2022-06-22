@@ -22,7 +22,6 @@
 
 #include "build/build_config.h"
 
-#include "common/maths.h"
 #include "common/utils.h"
 
 #include "drivers/pitotmeter/pitotmeter.h"
@@ -35,7 +34,6 @@
  * NXP MPXV7002DP differential pressure sensor
  *
  */
-
 #define PITOT_ADC_VOLTAGE_SCALER        (2.0f / 1.0f)       // MPXV7002DP is 5V device, assumed resistive divider 1K:1K
 #define PITOT_ADC_VOLTAGE_ZERO          (2.5f)              // Pressure offset is 2.5V
 #define PITOT_ADC_VOLTAGE_TO_PRESSURE   (1000.0f)           // 1V/kPa = 1000 Pa/V
@@ -61,7 +59,7 @@ static void adcPitotCalculate(pitotDev_t *pitot, float *pressure, float *tempera
     if (pressure)
         *pressure = (voltage * PITOT_ADC_VOLTAGE_SCALER - PITOT_ADC_VOLTAGE_ZERO) * PITOT_ADC_VOLTAGE_TO_PRESSURE;
     if (temperature)
-        *temperature = SSL_AIR_TEMPERATURE; // Temperature at standard sea level
+        *temperature = 288.15f;     // Temperature at standard sea level (288.15 K)
 }
 
 bool adcPitotDetect(pitotDev_t *pitot)

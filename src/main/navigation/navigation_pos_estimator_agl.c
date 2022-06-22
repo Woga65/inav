@@ -32,6 +32,8 @@
 #include "build/build_config.h"
 #include "build/debug.h"
 
+#if defined(USE_NAV)
+
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
 #include "navigation/navigation_pos_estimator_private.h"
@@ -200,3 +202,5 @@ void estimationCalculateAGL(estimationContext_t * ctx)
     posEstimator.est.aglQual = SURFACE_QUAL_LOW;
 #endif
 }
+
+#endif  // NAV

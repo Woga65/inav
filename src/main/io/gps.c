@@ -58,7 +58,6 @@
 
 #include "fc/config.h"
 #include "fc/runtime_config.h"
-#include "fc/settings.h"
 
 typedef struct {
     bool                isDriverBased;
@@ -76,10 +75,10 @@ gpsSolutionData_t gpsSol;
 // Map gpsBaudRate_e index to baudRate_e
 baudRate_e gpsToSerialBaudRate[GPS_BAUDRATE_COUNT] = { BAUD_115200, BAUD_57600, BAUD_38400, BAUD_19200, BAUD_9600, BAUD_230400 };
 
-static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
+static gpsProviderDescriptor_t  gpsProviders[GPS_PROVIDER_COUNT] = {
     /* NMEA GPS */
 #ifdef USE_GPS_PROTO_NMEA
-    { false, MODE_RX, false, &gpsRestartNMEA, &gpsHandleNMEA },
+    { false, MODE_RX, false, &gpsRestartNMEA_MTK, &gpsHandleNMEA },
 #else
     { false, 0, false,  NULL, NULL },
 #endif
@@ -90,6 +89,9 @@ static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
 #else
     { false, 0, false,  NULL, NULL },
 #endif
+
+    /* Stub */
+    { false, 0, false,  NULL, NULL },
 
     /* NAZA GPS module */
 #ifdef USE_GPS_PROTO_NAZA
@@ -105,6 +107,13 @@ static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
     { false, 0, false,  NULL, NULL },
 #endif
 
+    /* MTK GPS */
+#ifdef USE_GPS_PROTO_MTK
+    { false, MODE_RXTX, false, &gpsRestartNMEA_MTK, &gpsHandleMTK },
+#else
+    { false, 0, false,  NULL, NULL },
+#endif
+
     /* MSP GPS */
 #ifdef USE_GPS_PROTO_MSP
     { true, 0, false, &gpsRestartMSP, &gpsHandleMSP },
@@ -113,16 +122,16 @@ static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
 #endif
 };
 
-PG_REGISTER_WITH_RESET_TEMPLATE(gpsConfig_t, gpsConfig, PG_GPS_CONFIG, 1);
+PG_REGISTER_WITH_RESET_TEMPLATE(gpsConfig_t, gpsConfig, PG_GPS_CONFIG, 0);
 
 PG_RESET_TEMPLATE(gpsConfig_t, gpsConfig,
-    .provider = SETTING_GPS_PROVIDER_DEFAULT,
-    .sbasMode = SETTING_GPS_SBAS_MODE_DEFAULT,
-    .autoConfig = SETTING_GPS_AUTO_CONFIG_DEFAULT,
-    .autoBaud = SETTING_GPS_AUTO_BAUD_DEFAULT,
-    .dynModel = SETTING_GPS_DYN_MODEL_DEFAULT,
-    .gpsMinSats = SETTING_GPS_MIN_SATS_DEFAULT,
-    .ubloxUseGalileo = SETTING_GPS_UBLOX_USE_GALILEO_DEFAULT
+    .provider = GPS_UBLOX,
+    .sbasMode = SBAS_NONE,
+    .autoConfig = GPS_AUTOCONFIG_ON,
+    .autoBaud = GPS_AUTOBAUD_ON,
+    .dynModel = GPS_DYNMODEL_AIR_1G,
+    .gpsMinSats = 6,
+    .ubloxUseGalileo = false
 );
 
 void gpsSetState(gpsState_e state)
@@ -183,8 +192,6 @@ static void gpsResetSolution(void)
 {
     gpsSol.eph = 9999;
     gpsSol.epv = 9999;
-    gpsSol.numSat = 0;
-    gpsSol.hdop = 9999;
 
     gpsSol.fixType = GPS_NO_FIX;
 

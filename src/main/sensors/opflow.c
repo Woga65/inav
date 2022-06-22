@@ -50,7 +50,6 @@
 
 #include "fc/config.h"
 #include "fc/runtime_config.h"
-#include "fc/settings.h"
 
 #include "sensors/boardalignment.h"
 #include "sensors/gyro.h"
@@ -76,12 +75,12 @@ static float opflowCalibrationFlowAcc;
 #define OPFLOW_UPDATE_TIMEOUT_US        200000  // At least 5Hz updates required
 #define OPFLOW_CALIBRATE_TIME_MS        30000   // 30 second calibration time
 
-PG_REGISTER_WITH_RESET_TEMPLATE(opticalFlowConfig_t, opticalFlowConfig, PG_OPFLOW_CONFIG, 2);
+PG_REGISTER_WITH_RESET_TEMPLATE(opticalFlowConfig_t, opticalFlowConfig, PG_OPFLOW_CONFIG, 1);
 
 PG_RESET_TEMPLATE(opticalFlowConfig_t, opticalFlowConfig,
-    .opflow_hardware = SETTING_OPFLOW_HARDWARE_DEFAULT,
-    .opflow_align = SETTING_ALIGN_OPFLOW_DEFAULT,
-    .opflow_scale = SETTING_OPFLOW_SCALE_DEFAULT,
+    .opflow_hardware = OPFLOW_NONE,
+    .opflow_align = CW0_DEG_FLIP,
+    .opflow_scale = 10.5f,
 );
 
 static bool opflowDetect(opflowDev_t * dev, uint8_t opflowHardwareToUse)
@@ -237,8 +236,8 @@ void opflowUpdate(timeUs_t currentTimeUs)
             else if (opflow.flowQuality == OPFLOW_QUALITY_VALID) {
                 // Ongoing calibration - accumulate body and flow rotation magniture if opflow quality is good enough
                 const float invDt = 1.0e6 / opflow.dev.rawData.deltaTime;
-                opflowCalibrationBodyAcc += calc_length_pythagorean_2D(opflow.bodyRate[X], opflow.bodyRate[Y]);
-                opflowCalibrationFlowAcc += calc_length_pythagorean_2D(opflow.dev.rawData.flowRateRaw[X], opflow.dev.rawData.flowRateRaw[Y]) * invDt;
+                opflowCalibrationBodyAcc += sqrtf(sq(opflow.bodyRate[X]) + sq(opflow.bodyRate[Y]));
+                opflowCalibrationFlowAcc += sqrtf(sq(opflow.dev.rawData.flowRateRaw[X]) + sq(opflow.dev.rawData.flowRateRaw[Y])) * invDt;
             }
         }
 

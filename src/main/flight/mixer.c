@@ -42,8 +42,6 @@ FILE_COMPILE_FOR_SPEED
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
-#include "fc/controlrate_profile.h"
-#include "fc/settings.h"
 
 #include "flight/failsafe.h"
 #include "flight/imu.h"
@@ -63,6 +61,8 @@ static float motorMixRange;
 static float mixerScale = 1.0f;
 static EXTENDED_FASTRAM motorMixer_t currentMixer[MAX_SUPPORTED_MOTORS];
 static EXTENDED_FASTRAM uint8_t motorCount = 0;
+static EXTENDED_FASTRAM uint8_t revFlags[16];  //sibi
+static EXTENDED_FASTRAM int8_t vpitchMotorTrim[16] = {0}; //sibi
 EXTENDED_FASTRAM int mixerThrottleCommand;
 static EXTENDED_FASTRAM int throttleIdleValue = 0;
 static EXTENDED_FASTRAM int motorValueWhenStopped = 0;
@@ -73,44 +73,64 @@ static EXTENDED_FASTRAM int throttleRangeMin = 0;
 static EXTENDED_FASTRAM int throttleRangeMax = 0;
 static EXTENDED_FASTRAM int8_t motorYawMultiplier = 1;
 
-int motorZeroCommand = 0;
-
 PG_REGISTER_WITH_RESET_TEMPLATE(reversibleMotorsConfig_t, reversibleMotorsConfig, PG_REVERSIBLE_MOTORS_CONFIG, 0);
 
 PG_RESET_TEMPLATE(reversibleMotorsConfig_t, reversibleMotorsConfig,
-    .deadband_low = SETTING_3D_DEADBAND_LOW_DEFAULT,
-    .deadband_high = SETTING_3D_DEADBAND_HIGH_DEFAULT,
-    .neutral = SETTING_3D_NEUTRAL_DEFAULT
+    .deadband_low = 1406,
+    .deadband_high = 1514,
+    .neutral = 1460
 );
 
-PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 5);
+PG_REGISTER_WITH_RESET_TEMPLATE(mixerConfig_t, mixerConfig, PG_MIXER_CONFIG, 3);
 
 PG_RESET_TEMPLATE(mixerConfig_t, mixerConfig,
-    .motorDirectionInverted = SETTING_MOTOR_DIRECTION_INVERTED_DEFAULT,
-    .platformType = SETTING_PLATFORM_TYPE_DEFAULT,
-    .hasFlaps = SETTING_HAS_FLAPS_DEFAULT,
-    .appliedMixerPreset = SETTING_MODEL_PREVIEW_TYPE_DEFAULT, //This flag is not available in CLI and used by Configurator only
-    .outputMode = SETTING_OUTPUT_MODE_DEFAULT,
+    .motorDirectionInverted = 0,
+    .platformType = PLATFORM_MULTIROTOR,
+    .hasFlaps = false,
+    .appliedMixerPreset = -1, //This flag is not available in CLI and used by Configurator only
+    .fwMinThrottleDownPitchAngle = 0,
+    .pwmOutputsReversed = 0,  //sibi
+    .auxThrottleChannel = 0   //sibi
 );
 
-PG_REGISTER_WITH_RESET_TEMPLATE(motorConfig_t, motorConfig, PG_MOTOR_CONFIG, 9);
+PG_REGISTER_WITH_RESET_TEMPLATE(varPitchTrim_t, varPitchTrim, PG_VAR_PITCH_TRIM, 0); //sibi
+
+PG_RESET_TEMPLATE(varPitchTrim_t, varPitchTrim, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } //sibi
+);
+
+#ifdef BRUSHED_MOTORS
+#define DEFAULT_PWM_PROTOCOL    PWM_TYPE_BRUSHED
+#define DEFAULT_PWM_RATE        16000
+#else
+#define DEFAULT_PWM_PROTOCOL    PWM_TYPE_ONESHOT125
+#define DEFAULT_PWM_RATE        400
+#endif
+
+#define DEFAULT_MAX_THROTTLE    1850
+
+PG_REGISTER_WITH_RESET_TEMPLATE(motorConfig_t, motorConfig, PG_MOTOR_CONFIG, 6);
 
 PG_RESET_TEMPLATE(motorConfig_t, motorConfig,
-    .motorPwmProtocol = SETTING_MOTOR_PWM_PROTOCOL_DEFAULT,
-    .motorPwmRate = SETTING_MOTOR_PWM_RATE_DEFAULT,
-    .maxthrottle = SETTING_MAX_THROTTLE_DEFAULT,
-    .mincommand = SETTING_MIN_COMMAND_DEFAULT,
-    .motorPoleCount = SETTING_MOTOR_POLES_DEFAULT,            // Most brushless motors that we use are 14 poles
+    .motorPwmProtocol = DEFAULT_PWM_PROTOCOL,
+    .motorPwmRate = DEFAULT_PWM_RATE,
+    .maxthrottle = DEFAULT_MAX_THROTTLE,
+    .mincommand = 1000, 
+    .motorAccelTimeMs = 0,
+    .motorDecelTimeMs = 0,
+    .throttleIdle = 15.0f,
+    .throttleScale = 1.0f,
+    .motorPoleCount = 14            // Most brushless motors that we use are 14 poles
 );
 
 PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, primaryMotorMixer, PG_MOTOR_MIXER, 0);
 
-#define CRASH_OVER_AFTER_CRASH_FLIP_STICK_MIN 0.15f
+typedef void (*motorRateLimitingApplyFnPtr)(const float dT);
+static EXTENDED_FASTRAM motorRateLimitingApplyFnPtr motorRateLimitingApplyFn;
 
 int getThrottleIdleValue(void)
 {
     if (!throttleIdleValue) {
-        throttleIdleValue = motorConfig()->mincommand + (((motorConfig()->maxthrottle - motorConfig()->mincommand) / 100.0f) * currentBatteryProfile->motor.throttleIdle);
+        throttleIdleValue = motorConfig()->mincommand + (((motorConfig()->maxthrottle - motorConfig()->mincommand) / 100.0f) * motorConfig()->throttleIdle);
     }
 
     return throttleIdleValue;
@@ -118,12 +138,16 @@ int getThrottleIdleValue(void)
 
 static void computeMotorCount(void)
 {
+    uint16_t checkFlags = 1;  //sibi
     motorCount = 0;
     for (int i = 0; i < MAX_SUPPORTED_MOTORS; i++) {
         // check if done
         if (primaryMotorMixer(i)->throttle == 0.0f) {
             break;
         }
+        revFlags[i] = checkFlags & (mixerConfig()->pwmOutputsReversed);  //sibi
+        checkFlags <<= 1;
+        vpitchMotorTrim[i] = varPitchTrim()->varPitchTrimOutput[i]; //sibi
         motorCount++;
     }
 }
@@ -173,7 +197,7 @@ void mixerUpdateStateFlags(void)
     } else if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
         ENABLE_STATE(MULTIROTOR);
         ENABLE_STATE(ALTITUDE_CONTROL);
-    }
+    } 
 
     if (mixerConfig()->hasFlaps) {
         ENABLE_STATE(FLAPERON_AVAILABLE);
@@ -185,6 +209,44 @@ void mixerUpdateStateFlags(void)
 void nullMotorRateLimiting(const float dT)
 {
     UNUSED(dT);
+}
+
+void applyMotorRateLimiting(const float dT)
+{
+    static float motorPrevious[MAX_SUPPORTED_MOTORS] = { 0 };
+
+    if (feature(FEATURE_REVERSIBLE_MOTORS)) {
+        // FIXME: Don't apply rate limiting in 3D mode
+        for (int i = 0; i < motorCount; i++) {
+            motorPrevious[i] = motor[i];
+        }
+    }
+    else {
+        // Calculate max motor step
+        const uint16_t motorRange = motorConfig()->maxthrottle - throttleIdleValue;
+        const float motorMaxInc = (motorConfig()->motorAccelTimeMs == 0) ? 2000 : motorRange * dT / (motorConfig()->motorAccelTimeMs * 1e-3f);
+        const float motorMaxDec = (motorConfig()->motorDecelTimeMs == 0) ? 2000 : motorRange * dT / (motorConfig()->motorDecelTimeMs * 1e-3f);
+
+        for (int i = 0; i < motorCount; i++) {
+            // Apply motor rate limiting
+            motorPrevious[i] = constrainf(motor[i], motorPrevious[i] - motorMaxDec, motorPrevious[i] + motorMaxInc);
+
+            // Handle throttle below min_throttle (motor start/stop)
+            if (motorPrevious[i] < throttleIdleValue) {
+                if (motor[i] < throttleIdleValue) {
+                    motorPrevious[i] = motor[i];
+                }
+                else {
+                    motorPrevious[i] = throttleIdleValue;
+                }
+            }
+        }
+    }
+
+    // Update motor values
+    for (int i = 0; i < motorCount; i++) {
+        motor[i] = motorPrevious[i];
+    }
 }
 
 void mixerInit(void)
@@ -201,6 +263,12 @@ void mixerInit(void)
 
     mixerResetDisarmedMotors();
 
+    if (motorConfig()->motorAccelTimeMs || motorConfig()->motorDecelTimeMs) {
+        motorRateLimitingApplyFn = applyMotorRateLimiting;
+    } else {
+        motorRateLimitingApplyFn = nullMotorRateLimiting;
+    }
+
     if (mixerConfig()->motorDirectionInverted) {
         motorYawMultiplier = -1;
     } else {
@@ -210,20 +278,25 @@ void mixerInit(void)
 
 void mixerResetDisarmedMotors(void)
 {
-
+    int motorZeroCommand;
+    
     if (feature(FEATURE_REVERSIBLE_MOTORS)) {
         motorZeroCommand = reversibleMotorsConfig()->neutral;
         throttleRangeMin = throttleDeadbandHigh;
         throttleRangeMax = motorConfig()->maxthrottle;
     } else {
-        motorZeroCommand = motorConfig()->mincommand;
+        if (mixerConfig()->auxThrottleChannel) {       //sibi
+            motorZeroCommand = reversibleMotorsConfig()->neutral;
+        } else {
+            motorZeroCommand = motorConfig()->mincommand;
+        }
         throttleRangeMin = getThrottleIdleValue();
         throttleRangeMax = motorConfig()->maxthrottle;
     }
 
     reversibleMotorsThrottleState = MOTOR_DIRECTION_FORWARD;
 
-    if (feature(FEATURE_MOTOR_STOP)) {
+    if (feature(FEATURE_MOTOR_STOP) || mixerConfig()->auxThrottleChannel) { //sibi
         motorValueWhenStopped = motorZeroCommand;
     } else {
         motorValueWhenStopped = getThrottleIdleValue();
@@ -231,7 +304,7 @@ void mixerResetDisarmedMotors(void)
 
     // set disarmed motor values
     for (int i = 0; i < MAX_SUPPORTED_MOTORS; i++) {
-        motor_disarmed[i] = motorZeroCommand;
+        motor_disarmed[i] = motorZeroCommand + vpitchMotorTrim[i]; //sibisibi
     }
 }
 
@@ -262,79 +335,6 @@ static uint16_t handleOutputScaling(
         value = constrain(value, outputScaleMin, outputScaleMax);
     }
     return value;
-}
-static void applyTurtleModeToMotors(void) {
-
-    if (ARMING_FLAG(ARMED)) {
-        const float flipPowerFactor = ((float)currentBatteryProfile->motor.turtleModePowerFactor)/100.0f;
-        const float stickDeflectionPitchAbs = ABS(((float) rcCommand[PITCH]) / 500.0f);
-        const float stickDeflectionRollAbs = ABS(((float) rcCommand[ROLL]) / 500.0f);
-        const float stickDeflectionYawAbs = ABS(((float) rcCommand[YAW]) / 500.0f);
-        //deflection stick position
-
-        const float stickDeflectionPitchExpo =
-                flipPowerFactor * stickDeflectionPitchAbs + power3(stickDeflectionPitchAbs) * (1 - flipPowerFactor);
-        const float stickDeflectionRollExpo =
-                flipPowerFactor * stickDeflectionRollAbs + power3(stickDeflectionRollAbs) * (1 - flipPowerFactor);
-        const float stickDeflectionYawExpo =
-                flipPowerFactor * stickDeflectionYawAbs + power3(stickDeflectionYawAbs) * (1 - flipPowerFactor);
-
-        float signPitch = rcCommand[PITCH] < 0 ? 1 : -1;
-        float signRoll = rcCommand[ROLL] < 0 ? 1 : -1;
-        float signYaw = (float)((rcCommand[YAW] < 0 ? 1 : -1) * (mixerConfig()->motorDirectionInverted ? 1 : -1));
-
-        float stickDeflectionLength = calc_length_pythagorean_2D(stickDeflectionPitchAbs, stickDeflectionRollAbs);
-        float stickDeflectionExpoLength = calc_length_pythagorean_2D(stickDeflectionPitchExpo, stickDeflectionRollExpo);
-
-        if (stickDeflectionYawAbs > MAX(stickDeflectionPitchAbs, stickDeflectionRollAbs)) {
-            // If yaw is the dominant, disable pitch and roll
-            stickDeflectionLength = stickDeflectionYawAbs;
-            stickDeflectionExpoLength = stickDeflectionYawExpo;
-            signRoll = 0;
-            signPitch = 0;
-        } else {
-            // If pitch/roll dominant, disable yaw
-            signYaw = 0;
-        }
-
-        const float cosPhi = (stickDeflectionLength > 0) ? (stickDeflectionPitchAbs + stickDeflectionRollAbs) /
-                                                           (fast_fsqrtf(2.0f) * stickDeflectionLength) : 0;
-        const float cosThreshold = fast_fsqrtf(3.0f) / 2.0f; // cos(PI/6.0f)
-
-        if (cosPhi < cosThreshold) {
-            // Enforce either roll or pitch exclusively, if not on diagonal
-            if (stickDeflectionRollAbs > stickDeflectionPitchAbs) {
-                signPitch = 0;
-            } else {
-                signRoll = 0;
-            }
-        }
-
-        // Apply a reasonable amount of stick deadband
-        const float crashFlipStickMinExpo =
-                flipPowerFactor * CRASH_OVER_AFTER_CRASH_FLIP_STICK_MIN + power3(CRASH_OVER_AFTER_CRASH_FLIP_STICK_MIN) * (1 - flipPowerFactor);
-        const float flipStickRange = 1.0f - crashFlipStickMinExpo;
-        const float flipPower = MAX(0.0f, stickDeflectionExpoLength - crashFlipStickMinExpo) / flipStickRange;
-
-        for (int i = 0; i < motorCount; ++i) {
-
-            float motorOutputNormalised =
-                    signPitch * currentMixer[i].pitch +
-                    signRoll * currentMixer[i].roll +
-                    signYaw * currentMixer[i].yaw;
-
-            if (motorOutputNormalised < 0) {
-                motorOutputNormalised = 0;
-            }
-
-            motorOutputNormalised = MIN(1.0f, flipPower * motorOutputNormalised);
-
-            motor[i] = (int16_t)scaleRangef(motorOutputNormalised, 0, 1, motorConfig()->mincommand, motorConfig()->maxthrottle);
-        }
-    } else {
-        // Disarmed mode
-        stopMotors();
-    }
 }
 #endif
 
@@ -411,19 +411,36 @@ void FAST_CODE writeMotors(void)
                     );
                 }
             } else {
-                motorValue = motor[i];
+                //sibi
+                if (revFlags[i]) {
+                    if (motor[i] == motorConfig()->mincommand) {
+                        motorValue = motorConfig()->maxthrottle;
+                    } else {
+                        motorValue = (motorConfig()->maxthrottle + throttleIdleValue) - motor[i];
+                    }
+                } else {
+                    motorValue = motor[i];
+                }
             }
 
-        }
 #else
-        // We don't define USE_DSHOT
-        motorValue = motor[i];
+            // We don't define USE_DSHOT
+            //sibi
+            if (revFlags[i]) {
+                if (motor[i] == motorConfig()->mincommand) {
+                    motorValue = motorConfig()->maxthrottle;
+                } else {
+                    motorValue = (motorConfig()->maxthrottle + throttleIdleValue) - motor[i];
+                }
+            } else {
+                motorValue = motor[i];
+            }
 #endif
-
-        pwmWriteMotor(i, motorValue);
+            pwmWriteMotor(i, motorValue);
+        }
     }
 }
-
+    
 void writeAllMotors(int16_t mc)
 {
     // Sends commands to all motors
@@ -435,8 +452,11 @@ void writeAllMotors(int16_t mc)
 
 void stopMotors(void)
 {
-    writeAllMotors(feature(FEATURE_REVERSIBLE_MOTORS) ? reversibleMotorsConfig()->neutral : motorConfig()->mincommand);
-
+    if (mixerConfig()->auxThrottleChannel) {    //sibi
+        writeAllMotors(reversibleMotorsConfig()->neutral);
+    } else {
+        writeAllMotors(feature(FEATURE_REVERSIBLE_MOTORS) ? reversibleMotorsConfig()->neutral : motorConfig()->mincommand);
+    }
     delay(50); // give the timers and ESCs a chance to react.
 }
 
@@ -458,15 +478,8 @@ static int getReversibleMotorsThrottleDeadband(void)
     return feature(FEATURE_MOTOR_STOP) ? reversibleMotorsConfig()->neutral : directionValue;
 }
 
-void FAST_CODE mixTable()
+void FAST_CODE mixTable(const float dT)
 {
-#ifdef USE_DSHOT
-    if (FLIGHT_MODE(TURTLE_MODE)) {
-        applyTurtleModeToMotors();
-        return;
-    }
-#endif
-
     int16_t input[3];   // RPY, range [-500:+500]
     // Allow direct stick input to motors in passthrough mode on airplanes
     if (STATE(FIXED_WING_LEGACY) && FLIGHT_MODE(MANUAL_MODE)) {
@@ -506,7 +519,7 @@ void FAST_CODE mixTable()
     if (LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_THROTTLE)) {
         throttleRangeMin = throttleIdleValue;
         throttleRangeMax = motorConfig()->maxthrottle;
-        mixerThrottleCommand = constrain(logicConditionValuesByType[LOGIC_CONDITION_OVERRIDE_THROTTLE], throttleRangeMin, throttleRangeMax);
+        mixerThrottleCommand = constrain(logicConditionValuesByType[LOGIC_CONDITION_OVERRIDE_THROTTLE], throttleRangeMin, throttleRangeMax); 
     } else
 #endif
     if (feature(FEATURE_REVERSIBLE_MOTORS)) {
@@ -531,17 +544,6 @@ void FAST_CODE mixTable()
 
         motorValueWhenStopped = getReversibleMotorsThrottleDeadband();
         mixerThrottleCommand = constrain(rcCommand[THROTTLE], throttleRangeMin, throttleRangeMax);
-
-#ifdef USE_DSHOT
-        if(isMotorProtocolDigital() && feature(FEATURE_REVERSIBLE_MOTORS) && reversibleMotorsThrottleState == MOTOR_DIRECTION_BACKWARD) {
-            /*
-             * We need to start the throttle output from stick input to start in the middle of the stick at the low and.
-             * Without this, it's starting at the high side.
-             */
-            int throttleDistanceToMax = throttleRangeMax - rcCommand[THROTTLE];
-            mixerThrottleCommand = throttleRangeMin + throttleDistanceToMax;
-        }
-#endif
     } else {
         mixerThrottleCommand = rcCommand[THROTTLE];
         throttleRangeMin = throttleIdleValue;
@@ -549,13 +551,16 @@ void FAST_CODE mixTable()
 
         // Throttle scaling to limit max throttle when battery is full
     #ifdef USE_PROGRAMMING_FRAMEWORK
-        mixerThrottleCommand = ((mixerThrottleCommand - throttleRangeMin) * getThrottleScale(currentBatteryProfile->motor.throttleScale)) + throttleRangeMin;
+        mixerThrottleCommand = ((mixerThrottleCommand - throttleRangeMin) * getThrottleScale(motorConfig()->throttleScale)) + throttleRangeMin;
     #else
-        mixerThrottleCommand = ((mixerThrottleCommand - throttleRangeMin) * currentBatteryProfile->motor.throttleScale) + throttleRangeMin;
+        mixerThrottleCommand = ((mixerThrottleCommand - throttleRangeMin) * motorConfig()->throttleScale) + throttleRangeMin;
     #endif
         // Throttle compensation based on battery voltage
-        if (feature(FEATURE_THR_VBAT_COMP) && isAmperageConfigured() && feature(FEATURE_VBAT)) {
+        if (feature(FEATURE_THR_VBAT_COMP) && isAmperageConfigured() && feature(FEATURE_VBAT)) {                
             mixerThrottleCommand = MIN(throttleRangeMin + (mixerThrottleCommand - throttleRangeMin) * calculateThrottleCompensationFactor(), throttleRangeMax);
+        }
+        if (mixerConfig()->auxThrottleChannel) { //sibi
+            motorValueWhenStopped = getReversibleMotorsThrottleDeadband();
         }
     }
 
@@ -584,7 +589,7 @@ void FAST_CODE mixTable()
     if (ARMING_FLAG(ARMED)) {
         const motorStatus_e currentMotorStatus = getMotorStatus();
         for (int i = 0; i < motorCount; i++) {
-            motor[i] = rpyMix[i] + constrain(mixerThrottleCommand * currentMixer[i].throttle, throttleMin, throttleMax);
+            motor[i] = rpyMix[i] + vpitchMotorTrim[i] + constrain(mixerThrottleCommand * currentMixer[i].throttle, throttleMin, throttleMax); //sibisibi
 
             if (failsafeIsActive()) {
                 motor[i] = constrain(motor[i], motorConfig()->mincommand, motorConfig()->maxthrottle);
@@ -594,25 +599,17 @@ void FAST_CODE mixTable()
 
             // Motor stop handling
             if (currentMotorStatus != MOTOR_RUNNING) {
-                motor[i] = motorValueWhenStopped;
+                motor[i] = motorValueWhenStopped + vpitchMotorTrim[i]; //sibisibi
             }
-#ifdef USE_DEV_TOOLS
-            if (systemConfig()->groundTestMode) {
-                motor[i] = motorZeroCommand;
-            }
-#endif
         }
     } else {
         for (int i = 0; i < motorCount; i++) {
             motor[i] = motor_disarmed[i];
         }
     }
-}
 
-int16_t getThrottlePercent(void)
-{
-    int16_t thr = (constrain(rcCommand[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX ) - getThrottleIdleValue()) * 100 / (motorConfig()->maxthrottle - getThrottleIdleValue());
-    return thr;
+    /* Apply motor acceleration/deceleration limit */
+    motorRateLimitingApplyFn(dT);
 }
 
 motorStatus_e getMotorStatus(void)
@@ -626,9 +623,9 @@ motorStatus_e getMotorStatus(void)
     }
 
     const bool fixedWingOrAirmodeNotActive = STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE);
-    const bool throttleStickLow =
-        (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW);
-
+//    const bool throttleStickLow = (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW);
+    const bool throttleStickLow = (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) != THROTTLE_HIGH);
+        
     if (throttleStickLow && fixedWingOrAirmodeNotActive) {
 
         if ((navConfig()->general.flags.nav_overrides_motor_stop == NOMS_OFF_ALWAYS) && failsafeIsActive()) {
@@ -662,19 +659,4 @@ void loadPrimaryMotorMixer(void) {
     for (int i = 0; i < MAX_SUPPORTED_MOTORS; i++) {
         currentMixer[i] = *primaryMotorMixer(i);
     }
-}
-
-bool areMotorsRunning(void)
-{
-    if (ARMING_FLAG(ARMED)) {
-        return true;
-    } else {
-        for (int i = 0; i < motorCount; i++) {
-            if (motor_disarmed[i] != motorZeroCommand) {
-                return true;
-            }
-        }
-    }
-
-    return false;
 }

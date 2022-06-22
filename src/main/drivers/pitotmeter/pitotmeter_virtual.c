@@ -74,9 +74,10 @@ static void virtualPitotCalculate(pitotDev_t *pitot, float *pressure, float *tem
         }
     }
     if (pressure)
-        *pressure = sq(airSpeed) * SSL_AIR_DENSITY / 20000.0f + SSL_AIR_PRESSURE;
+        //*pressure = sq(airSpeed / 100) * AIR_DENSITY_SEA_LEVEL_15C / 2 + P0;
+        *pressure = sq(airSpeed) * AIR_DENSITY_SEA_LEVEL_15C / 20000.0f + P0;
     if (temperature)
-        *temperature = SSL_AIR_TEMPERATURE; // Temperature at standard sea level
+        *temperature = 288.15f;     // Temperature at standard sea level (288.15 K)
 }
 
 bool virtualPitotDetect(pitotDev_t *pitot)

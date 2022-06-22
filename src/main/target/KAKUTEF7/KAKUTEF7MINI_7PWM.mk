@@ -1,0 +1,1 @@
+#KAKUTEF7MINI_7PWM.mk file

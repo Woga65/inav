@@ -28,6 +28,9 @@ FILE_COMPILE_FOR_SPEED
 #include "common/maths.h"
 #include "common/utils.h"
 
+#define BIQUAD_BANDWIDTH 1.9f     /* bandwidth in octaves */
+#define BIQUAD_Q 1.0f / sqrtf(2.0f)     /* quality factor - butterworth*/
+
 // NULL filter
 float nullFilterApply(void *filter, float input)
 {
@@ -45,23 +48,17 @@ float nullFilterApply4(void *filter, float input, float f_cut, float dt)
 
 // PT1 Low Pass filter
 
-static float pt1ComputeRC(const float f_cut)
-{
-    return 1.0f / (2.0f * M_PIf * f_cut);
-}
-
 // f_cut = cutoff frequency
 void pt1FilterInitRC(pt1Filter_t *filter, float tau, float dT)
 {
     filter->state = 0.0f;
     filter->RC = tau;
     filter->dT = dT;
-    filter->alpha = filter->dT / (filter->RC + filter->dT);
 }
 
 void pt1FilterInit(pt1Filter_t *filter, float f_cut, float dT)
 {
-    pt1FilterInitRC(filter, pt1ComputeRC(f_cut), dT);
+    pt1FilterInitRC(filter, 1.0f / (2.0f * M_PIf * f_cut), dT);
 }
 
 void pt1FilterSetTimeConstant(pt1Filter_t *filter, float tau) {
@@ -72,15 +69,9 @@ float pt1FilterGetLastOutput(pt1Filter_t *filter) {
     return filter->state;
 }
 
-void pt1FilterUpdateCutoff(pt1Filter_t *filter, float f_cut)
-{
-    filter->RC = pt1ComputeRC(f_cut);
-    filter->alpha = filter->dT / (filter->RC + filter->dT);
-}
-
 float FAST_CODE NOINLINE pt1FilterApply(pt1Filter_t *filter, float input)
 {
-    filter->state = filter->state + filter->alpha * (input - filter->state);
+    filter->state = filter->state + filter->dT / (filter->RC + filter->dT) * (input - filter->state);
     return filter->state;
 }
 
@@ -95,84 +86,17 @@ float FAST_CODE NOINLINE pt1FilterApply4(pt1Filter_t *filter, float input, float
 {
     // Pre calculate and store RC
     if (!filter->RC) {
-        filter->RC = pt1ComputeRC(f_cut);
+        filter->RC = 1.0f / ( 2.0f * M_PIf * f_cut );
     }
 
     filter->dT = dT;    // cache latest dT for possible use in pt1FilterApply
-    filter->alpha = filter->dT / (filter->RC + filter->dT);
-    filter->state = filter->state + filter->alpha * (input - filter->state);
+    filter->state = filter->state + dT / (filter->RC + dT) * (input - filter->state);
     return filter->state;
 }
 
 void pt1FilterReset(pt1Filter_t *filter, float input)
 {
     filter->state = input;
-}
-
-/*
- * PT2 LowPassFilter
- */
-float pt2FilterGain(float f_cut, float dT)
-{
-    const float order = 2.0f;
-    const float orderCutoffCorrection = 1 / sqrtf(powf(2, 1.0f / order) - 1);
-    float RC = 1 / (2 * orderCutoffCorrection * M_PIf * f_cut);
-    // float RC = 1 / (2 * 1.553773974f * M_PIf * f_cut);
-    // where 1.553773974 = 1 / sqrt( (2^(1 / order) - 1) ) and order is 2
-    return dT / (RC + dT);
-}
-
-void pt2FilterInit(pt2Filter_t *filter, float k)
-{
-    filter->state = 0.0f;
-    filter->state1 = 0.0f;
-    filter->k = k;
-}
-
-void pt2FilterUpdateCutoff(pt2Filter_t *filter, float k)
-{
-    filter->k = k;
-}
-
-FAST_CODE float pt2FilterApply(pt2Filter_t *filter, float input)
-{
-    filter->state1 = filter->state1 + filter->k * (input - filter->state1);
-    filter->state = filter->state + filter->k * (filter->state1 - filter->state);
-    return filter->state;
-}
-
-/*
- * PT3 LowPassFilter
- */
-float pt3FilterGain(float f_cut, float dT)
-{
-    const float order = 3.0f;
-    const float orderCutoffCorrection = 1 / sqrtf(powf(2, 1.0f / order) - 1);
-    float RC = 1 / (2 * orderCutoffCorrection * M_PIf * f_cut);
-    // float RC = 1 / (2 * 1.961459177f * M_PIf * f_cut);
-    // where 1.961459177 = 1 / sqrt( (2^(1 / order) - 1) ) and order is 3
-    return dT / (RC + dT);
-}
-
-void pt3FilterInit(pt3Filter_t *filter, float k)
-{
-    filter->state = 0.0f;
-    filter->state1 = 0.0f;
-    filter->state2 = 0.0f;
-    filter->k = k;
-}
-
-void pt3FilterUpdateCutoff(pt3Filter_t *filter, float k)
-{
-    filter->k = k;
-}
-
-FAST_CODE float pt3FilterApply(pt3Filter_t *filter, float input)
-{
-    filter->state1 = filter->state1 + filter->k * (input - filter->state1);
-    filter->state2 = filter->state2 + filter->k * (filter->state1 - filter->state2);
-    filter->state = filter->state + filter->k * (filter->state2 - filter->state);
-    return filter->state;
 }
 
 // rate_limit = maximum rate of change of the output value in units per second
@@ -315,37 +239,4 @@ FAST_CODE void biquadFilterUpdate(biquadFilter_t *filter, float filterFreq, uint
     filter->x2 = x2;
     filter->y1 = y1;
     filter->y2 = y2;
-}
-
-FUNCTION_COMPILE_FOR_SIZE
-void initFilter(const uint8_t filterType, filter_t *filter, const float cutoffFrequency, const uint32_t refreshRate) {
-    const float dT = refreshRate * 1e-6f;
-
-    if (cutoffFrequency) {
-        if (filterType == FILTER_PT1) {
-            pt1FilterInit(&filter->pt1, cutoffFrequency, dT);
-        } if (filterType == FILTER_PT2) {
-            pt2FilterInit(&filter->pt2, pt2FilterGain(cutoffFrequency, dT));
-        } if (filterType == FILTER_PT3) {
-            pt3FilterInit(&filter->pt3, pt3FilterGain(cutoffFrequency, dT));
-        } else {
-            biquadFilterInitLPF(&filter->biquad, cutoffFrequency, refreshRate);
-        }
-    }
-}
-
-FUNCTION_COMPILE_FOR_SIZE
-void assignFilterApplyFn(uint8_t filterType, float cutoffFrequency, filterApplyFnPtr *applyFn) {
-    *applyFn = nullFilterApply;
-    if (cutoffFrequency) {
-        if (filterType == FILTER_PT1) {
-            *applyFn = (filterApplyFnPtr) pt1FilterApply;
-        } if (filterType == FILTER_PT2) {
-            *applyFn = (filterApplyFnPtr) pt2FilterApply;
-        } if (filterType == FILTER_PT3) {
-            *applyFn = (filterApplyFnPtr) pt3FilterApply;
-        } else {
-            *applyFn = (filterApplyFnPtr) biquadFilterApply;
-        }
-    }
 }

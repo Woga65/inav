@@ -1,2 +1,1 @@
 target_stm32f765xi(MATEKF765)
-target_stm32f765xi(MATEKF765SE)

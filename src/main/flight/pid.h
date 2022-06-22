@@ -19,13 +19,12 @@
 
 #include "config/parameter_group.h"
 #include "fc/runtime_config.h"
-#include "common/time.h"
 
 #define GYRO_SATURATION_LIMIT       1800        // 1800dps
 #define PID_SUM_LIMIT_MIN           100
 #define PID_SUM_LIMIT_MAX           1000
 #define PID_SUM_LIMIT_DEFAULT       500
-#define PID_SUM_LIMIT_YAW_DEFAULT   400
+#define PID_SUM_LIMIT_YAW_DEFAULT   350
 
 #define HEADING_HOLD_RATE_LIMIT_MIN 10
 #define HEADING_HOLD_RATE_LIMIT_MAX 250
@@ -55,8 +54,6 @@ FP-PID has been rescaled to match LuxFloat (and MWRewrite) from Cleanflight 1.13
 
 #define ANTI_GRAVITY_THROTTLE_FILTER_CUTOFF 15  // The anti gravity throttle highpass filter cutoff
 
-#define FIXED_WING_LEVEL_TRIM_DEADBAND_DEFAULT 5
-
 #define TASK_AUX_RATE_HZ   100 //In Hz
 
 typedef enum {
@@ -79,15 +76,15 @@ typedef enum {
 typedef enum {
     PID_TYPE_NONE = 0,  // Not used in the current platform/mixer/configuration
     PID_TYPE_PID,   // Uses P, I and D terms
-    PID_TYPE_PIFF,  // Uses P, I, D and FF
+    PID_TYPE_PIFF,  // Uses P, I and FF, ignoring D
     PID_TYPE_AUTO,  // Autodetect
 } pidType_e;
 
 typedef struct pid8_s {
-    uint16_t P;
-    uint16_t I;
-    uint16_t D;
-    uint16_t FF;
+    uint8_t P;
+    uint8_t I;
+    uint8_t D;
+    uint8_t FF;
 } pid8_t;
 
 typedef struct pidBank_s {
@@ -131,7 +128,6 @@ typedef struct pidProfile_s {
     float       fixedWingCoordinatedYawGain;    // This is the gain of the yaw rate required to keep the yaw rate consistent with the turn rate for a coordinated turn.
     float       fixedWingCoordinatedPitchGain;    // This is the gain of the pitch rate to keep the pitch angle constant during coordinated turns.
     float       fixedWingItermLimitOnStickPosition;   //Do not allow Iterm to grow when stick position is above this point
-    uint16_t    fixedWingYawItermBankFreeze;       // Freeze yaw Iterm when bank angle is more than this many degrees
 
     uint8_t     loiter_direction;               // Direction of loitering center point on right wing (clockwise - as before), or center point on left wing (counterclockwise)
     float       navVelXyDTermLpfHz;
@@ -141,62 +137,50 @@ typedef struct pidProfile_s {
     uint8_t iterm_relax_cutoff;             // This cutoff frequency specifies a low pass filter which predicts average response of the quad to setpoint
     uint8_t iterm_relax;                    // Enable iterm suppression during stick input
 
-#ifdef USE_D_BOOST
-    float dBoostMin;
-    float dBoostMax;
+    float dBoostFactor;
     float dBoostMaxAtAlleceleration;
     uint8_t dBoostGyroDeltaLpfHz;
-#endif
-
-#ifdef USE_ANTIGRAVITY
     float antigravityGain;
     float antigravityAccelerator;
     uint8_t antigravityCutoff;
-#endif
 
     uint16_t navFwPosHdgPidsumLimit;
     uint8_t controlDerivativeLpfHz;
-
-    float fixedWingLevelTrim;
-    float fixedWingLevelTrimGain;
-#ifdef USE_SMITH_PREDICTOR
-    float smithPredictorStrength;
-    float smithPredictorDelay;
-    uint16_t smithPredictorFilterHz;
-#endif
+    uint16_t kalman_q;
+    uint16_t kalman_w;
+    uint16_t kalman_sharpness;
+    uint8_t kalmanEnabled;
 } pidProfile_t;
 
 typedef struct pidAutotuneConfig_s {
-    uint16_t    fw_detect_time;             // Time [ms] to detect sustained undershoot or overshoot
-    uint8_t     fw_min_stick;               // Minimum stick input required to update rates and gains
+    uint16_t    fw_overshoot_time;          // Time [ms] to detect sustained overshoot
+    uint16_t    fw_undershoot_time;         // Time [ms] to detect sustained undershoot
+    uint8_t     fw_max_rate_threshold;      // Threshold [%] of max rate to consider autotune detection
     uint8_t     fw_ff_to_p_gain;            // FF to P gain (strength relationship) [%]
-    uint8_t     fw_p_to_d_gain;             // P to D gain (strength relationship) [%]
     uint16_t    fw_ff_to_i_time_constant;   // FF to I time (defines time for I to reach the same level of response as FF) [ms]
-    uint8_t     fw_rate_adjustment;         // Adjust rate settings during autotune?
-    uint8_t     fw_max_rate_deflection;     // Percentage of max mixer output used for calculating the rates
 } pidAutotuneConfig_t;
-
-typedef enum {
-    FIXED,
-    LIMIT,
-    AUTO,
-} fw_autotune_rate_adjustment_e;
 
 PG_DECLARE_PROFILE(pidProfile_t, pidProfile);
 PG_DECLARE(pidAutotuneConfig_t, pidAutotuneConfig);
+
+typedef struct pidAdjust_s {
+    uint8_t pid_adjust_aux_channel;              // AUX channel-No (0:off / 1-n:AUX1-AUXn) used to adjust PID according to the flight mode (helicopter like vehicles)
+    float   pid_scaling_factor_p[3];             // On helicopters the required P gain can be very low, especially on the roll axis. Let's scale it to allow for fine adjustment.
+    float   pid_scaling_factor_i[3];             // We already have a need for scaling P and D, so let's do the same for I too to make the setup consistent. 
+    float   pid_scaling_factor_d[3];             // Variable pitch vehicles respond violently to even a little too high D gain. Let's scale it down to allow for fine adjustment
+} pidAdjust_t;  // sibi
+
+PG_DECLARE(pidAdjust_t, pidAdjust); //sibi
 
 const pidBank_t * pidBank(void);
 pidBank_t * pidBankMutable(void);
 
 extern int16_t axisPID[];
-extern int32_t axisPID_P[], axisPID_I[], axisPID_D[], axisPID_F[], axisPID_Setpoint[];
+extern int32_t axisPID_P[], axisPID_I[], axisPID_D[], axisPID_Setpoint[];
 
 void pidInit(void);
 bool pidInitFilters(void);
 void pidResetErrorAccumulators(void);
-void pidReduceErrorAccumulators(int8_t delta, uint8_t axis);
-float getAxisIterm(uint8_t axis);
-float getTotalRateTarget(void);
 void pidResetTPAFilter(void);
 
 struct controlRateConfig_s;
@@ -224,6 +208,4 @@ void autotuneUpdateState(void);
 void autotuneFixedWingUpdate(const flight_dynamics_index_t axis, float desiredRateDps, float reachedRateDps, float pidOutput);
 
 pidType_e pidIndexGetType(pidIndex_e pidIndex);
-
-void updateFixedWingLevelTrim(timeUs_t currentTimeUs);
-float getFixedWingLevelTrim(void);
+uint8_t * getD_FFRefByBank(pidBank_t *pidBank, pidIndex_e pidIndex);

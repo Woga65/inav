@@ -46,7 +46,6 @@
 #include "io/serial.h"
 #include "fc/config.h"
 #include "fc/runtime_config.h"
-#include "fc/settings.h"
 
 
 #if defined(USE_ESC_SENSOR)
@@ -81,7 +80,7 @@ static bool             escSensorDataNeedsUpdate;
 PG_REGISTER_WITH_RESET_TEMPLATE(escSensorConfig_t, escSensorConfig, PG_ESC_SENSOR_CONFIG, 1);
 PG_RESET_TEMPLATE(escSensorConfig_t, escSensorConfig,
     .currentOffset = 0, // UNUSED
-    .listenOnly = SETTING_ESC_SENSOR_LISTEN_ONLY_DEFAULT,
+    .listenOnly = 0,
 );
 
 static int getTelemetryMotorCount(void)

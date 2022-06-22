@@ -56,6 +56,7 @@
 #define I2C1_SDA                PB7
 
 #define USE_SPI
+#define USE_OSD
 
 // include the max7456 driver
 #define USE_MAX7456

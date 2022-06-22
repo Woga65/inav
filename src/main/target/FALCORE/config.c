@@ -59,8 +59,11 @@ void targetConfiguration(void)
 
 
     gyroConfigMutable()->looptime = 1000;
+    gyroConfigMutable()->gyroSync = 1;
     gyroConfigMutable()->gyro_lpf = 0;              // 256 Hz
-    gyroConfigMutable()->gyro_main_lpf_hz = 90;
+    gyroConfigMutable()->gyro_soft_lpf_hz = 90;
+    gyroConfigMutable()->gyro_notch_hz = 150;
+    gyroConfigMutable()->gyro_notch_cutoff = 80;
 
     accelerometerConfigMutable()->acc_hardware = ACC_MPU6500;
     accelerometerConfigMutable()->acc_lpf_hz = 15;
@@ -87,7 +90,7 @@ void targetConfiguration(void)
     failsafeConfigMutable()->failsafe_delay = 5;
     failsafeConfigMutable()->failsafe_recovery_delay = 5;
     failsafeConfigMutable()->failsafe_off_delay = 200;
-    currentBatteryProfile->failsafe_throttle = 1200;
+    failsafeConfigMutable()->failsafe_throttle = 1200;
     failsafeConfigMutable()->failsafe_procedure = FAILSAFE_PROCEDURE_RTH;
 
     boardAlignmentMutable()->rollDeciDegrees = 0;
@@ -118,7 +121,7 @@ void targetConfiguration(void)
     navConfigMutable()->general.rth_altitude = 1000;
 
     navConfigMutable()->mc.max_bank_angle = 30;
-    currentBatteryProfile->nav.mc.hover_throttle = 1500;
+    navConfigMutable()->mc.hover_throttle = 1500;
     navConfigMutable()->mc.auto_disarm_delay = 2000;
 
     /*
@@ -190,6 +193,4 @@ void targetConfiguration(void)
     ((controlRateConfig_t*)currentControlRateProfile)->throttle.rcExpo8 = 0;
     ((controlRateConfig_t*)currentControlRateProfile)->throttle.dynPID = 10;
     ((controlRateConfig_t*)currentControlRateProfile)->throttle.pa_breakpoint = 1600;
-
-    beeperConfigMutable()->pwmMode = true;
 }

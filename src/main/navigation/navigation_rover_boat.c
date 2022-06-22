@@ -26,19 +26,15 @@
 
 FILE_COMPILE_FOR_SIZE
 
+#ifdef USE_NAV
+
 #include "build/debug.h"
-
 #include "common/utils.h"
-
 #include "fc/rc_controls.h"
 #include "fc/config.h"
-
 #include "flight/mixer.h"
-
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
-
-#include "sensors/battery.h"
 
 static bool isYawAdjustmentValid = false;
 static int32_t navHeadingError;
@@ -75,11 +71,11 @@ void applyRoverBoatPositionController(timeUs_t currentTimeUs)
     static timeUs_t previousTimePositionUpdate;         // Occurs @ GPS update rate
     static timeUs_t previousTimeUpdate;                 // Occurs @ looptime rate
 
-    const timeDeltaLarge_t deltaMicros = currentTimeUs - previousTimeUpdate;
+    const timeDelta_t deltaMicros = currentTimeUs - previousTimeUpdate;
     previousTimeUpdate = currentTimeUs;
 
     // If last position update was too long in the past - ignore it (likely restarting altitude controller)
-    if (deltaMicros > MAX_POSITION_UPDATE_INTERVAL_US) {
+    if (deltaMicros > HZ2US(MIN_POSITION_UPDATE_RATE_HZ)) {
         previousTimeUpdate = currentTimeUs;
         previousTimePositionUpdate = currentTimeUs;
         resetFixedWingPositionController();
@@ -90,17 +86,17 @@ void applyRoverBoatPositionController(timeUs_t currentTimeUs)
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         // If we have new position - update velocity and acceleration controllers
         if (posControl.flags.horizontalPositionDataNew) {
-            const timeDeltaLarge_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
+            const timeDelta_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
             previousTimePositionUpdate = currentTimeUs;
 
-            if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
+            if (deltaMicrosPositionUpdate < HZ2US(MIN_POSITION_UPDATE_RATE_HZ)) {
                 update2DPositionHeadingController(currentTimeUs, deltaMicrosPositionUpdate);
             } else {
                 resetFixedWingPositionController();
             }
 
             // Indicate that information is no longer usable
-            posControl.flags.horizontalPositionDataConsumed = true;
+            posControl.flags.horizontalPositionDataConsumed = 1;
         }
 
         isYawAdjustmentValid = true;
@@ -129,7 +125,7 @@ void applyRoverBoatPitchRollThrottleController(navigationFSMStateFlags_t navStat
                 rcCommand[YAW] = posControl.rcAdjustment[YAW];
             }
 
-            rcCommand[THROTTLE] = constrain(currentBatteryProfile->nav.fw.cruise_throttle, motorConfig()->mincommand, motorConfig()->maxthrottle);
+            rcCommand[THROTTLE] = constrain(navConfig()->fw.cruise_throttle, motorConfig()->mincommand, motorConfig()->maxthrottle);
         }
     }
 }
@@ -140,9 +136,11 @@ void applyRoverBoatNavigationController(navigationFSMStateFlags_t navStateFlags,
         rcCommand[ROLL] = 0;
         rcCommand[PITCH] = 0;
         rcCommand[YAW] = 0;
-        rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
+        rcCommand[THROTTLE] = failsafeConfig()->failsafe_throttle;
     } else if (navStateFlags & NAV_CTL_POS) {
         applyRoverBoatPositionController(currentTimeUs);
         applyRoverBoatPitchRollThrottleController(navStateFlags, currentTimeUs);
     }
 }
+
+#endif

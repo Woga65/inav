@@ -27,7 +27,7 @@ typedef enum {
     TASK_PRIORITY_MEDIUM = 3,
     TASK_PRIORITY_MEDIUM_HIGH = 4,
     TASK_PRIORITY_HIGH = 5,
-    TASK_PRIORITY_REALTIME = 18,
+    TASK_PRIORITY_REALTIME = 6,
     TASK_PRIORITY_MAX = 255
 } cfTaskPriority_e;
 
@@ -51,13 +51,12 @@ typedef struct {
 typedef enum {
     /* Actual tasks */
     TASK_SYSTEM = 0,
-    TASK_PID,
-    TASK_GYRO,
+    TASK_GYROPID,
     TASK_RX,
     TASK_SERIAL,
     TASK_BATTERY,
     TASK_TEMPERATURE,
-#if defined(BEEPER) || defined(USE_DSHOT)
+#ifdef BEEPER
     TASK_BEEPER,
 #endif
 #ifdef USE_LIGHTS
@@ -87,7 +86,7 @@ typedef enum {
 #ifdef USE_LED_STRIP
     TASK_LEDSTRIP,
 #endif
-#if defined(USE_SERVO_SBUS)
+#if defined(USE_PWM_SERVO_DRIVER) || defined(USE_SERVO_SBUS)
     TASK_PWMDRIVER,
 #endif
 #ifdef STACK_CHECK
@@ -101,6 +100,9 @@ typedef enum {
 #endif
 #ifdef USE_OPFLOW
     TASK_OPFLOW,
+#endif
+#ifdef USE_UAV_INTERCONNECT
+    TASK_UAV_INTERCONNECT,
 #endif
 #ifdef USE_RCDEVICE
     TASK_RCDEVICE,
@@ -120,9 +122,6 @@ typedef enum {
 #endif
 #ifdef USE_IRLOCK
     TASK_IRLOCK,
-#endif
-#ifdef USE_SECONDARY_IMU
-    TASK_SECONDARY_IMU,
 #endif
     /* Count of real tasks */
     TASK_COUNT,

@@ -29,18 +29,6 @@
 #include "drivers/bus_spi.h"
 #include "drivers/time.h"
 
-void spiChipSelectSetupDelay(void)
-{
-    // CS->CLK delay, MPU6000 - 8ns
-    delayNanos(8);
-}
-
-void spiChipSelectHoldTime(void)
-{
-    // CLK->CS delay, MPU6000 - 500ns
-    delayNanos(500);
-}
-
 bool spiBusInitHost(const busDevice_t * dev)
 {
     const bool spiLeadingEdge = (dev->flags & DEVFLAGS_SPI_MODE_0);
@@ -50,12 +38,12 @@ bool spiBusInitHost(const busDevice_t * dev)
 void spiBusSelectDevice(const busDevice_t * dev)
 {
     IOLo(dev->busdev.spi.csnPin);
-    spiChipSelectSetupDelay();
+    __NOP();
 }
 
 void spiBusDeselectDevice(const busDevice_t * dev)
 {
-    spiChipSelectHoldTime();
+    __NOP();
     IOHi(dev->busdev.spi.csnPin);
 }
 
@@ -78,13 +66,15 @@ bool spiBusTransfer(const busDevice_t * dev, uint8_t * rxBuf, const uint8_t * tx
     SPI_TypeDef * instance = spiInstanceByDevice(dev->busdev.spi.spiBus);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusSelectDevice(dev);
+        IOLo(dev->busdev.spi.csnPin);
+        __NOP();
     }
 
     spiTransfer(instance, rxBuf, txBuf, length);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusDeselectDevice(dev);
+        __NOP();
+        IOHi(dev->busdev.spi.csnPin);
     }
 
     return true;
@@ -95,7 +85,8 @@ bool spiBusTransferMultiple(const busDevice_t * dev, busTransferDescriptor_t * d
     SPI_TypeDef * instance = spiInstanceByDevice(dev->busdev.spi.spiBus);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusSelectDevice(dev);
+        IOLo(dev->busdev.spi.csnPin);
+        __NOP();
     }
 
     for (int n = 0; n < count; n++) {
@@ -103,7 +94,8 @@ bool spiBusTransferMultiple(const busDevice_t * dev, busTransferDescriptor_t * d
     }
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusDeselectDevice(dev);
+        __NOP();
+        IOHi(dev->busdev.spi.csnPin);
     }
 
     return true;
@@ -114,14 +106,16 @@ bool spiBusWriteRegister(const busDevice_t * dev, uint8_t reg, uint8_t data)
     SPI_TypeDef * instance = spiInstanceByDevice(dev->busdev.spi.spiBus);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusSelectDevice(dev);
+        IOLo(dev->busdev.spi.csnPin);
+        delayMicroseconds(1);
     }
 
     spiTransferByte(instance, reg);
     spiTransferByte(instance, data);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusDeselectDevice(dev);
+        delayMicroseconds(1);
+        IOHi(dev->busdev.spi.csnPin);
     }
 
     return true;
@@ -132,14 +126,14 @@ bool spiBusWriteBuffer(const busDevice_t * dev, uint8_t reg, const uint8_t * dat
     SPI_TypeDef * instance = spiInstanceByDevice(dev->busdev.spi.spiBus);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusSelectDevice(dev);
+        IOLo(dev->busdev.spi.csnPin);
     }
 
     spiTransferByte(instance, reg);
     spiTransfer(instance, NULL, data, length);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusDeselectDevice(dev);
+        IOHi(dev->busdev.spi.csnPin);
     }
 
     return true;
@@ -150,14 +144,14 @@ bool spiBusReadBuffer(const busDevice_t * dev, uint8_t reg, uint8_t * data, uint
     SPI_TypeDef * instance = spiInstanceByDevice(dev->busdev.spi.spiBus);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusSelectDevice(dev);
+        IOLo(dev->busdev.spi.csnPin);
     }
 
     spiTransferByte(instance, reg);
     spiTransfer(instance, data, NULL, length);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusDeselectDevice(dev);
+        IOHi(dev->busdev.spi.csnPin);
     }
 
     return true;
@@ -168,14 +162,14 @@ bool spiBusReadRegister(const busDevice_t * dev, uint8_t reg, uint8_t * data)
     SPI_TypeDef * instance = spiInstanceByDevice(dev->busdev.spi.spiBus);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusSelectDevice(dev);
+        IOLo(dev->busdev.spi.csnPin);
     }
 
     spiTransferByte(instance, reg);
     spiTransfer(instance, data, NULL, 1);
 
     if (!(dev->flags & DEVFLAGS_USE_MANUAL_DEVICE_SELECT)) {
-        spiBusDeselectDevice(dev);
+        IOHi(dev->busdev.spi.csnPin);
     }
 
     return true;

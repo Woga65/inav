@@ -56,8 +56,6 @@
 #define JEDEC_ID_SPANSION_S25FL116     0x014015
 #define JEDEC_ID_EON_W25Q64            0x1C3017
 #define JEDEC_ID_CYPRESS_S25FL128L     0x016018
-#define JEDEC_ID_WINBOND_W25Q128_2     0xEF7018
-
 
 // The timeout we expect between being able to issue page program instructions
 #define DEFAULT_TIMEOUT_MILLIS       6
@@ -70,7 +68,6 @@ static flashGeometry_t geometry = {.pageSize = M25P16_PAGESIZE};
 
 static busDevice_t * busDev = NULL;
 static bool isLargeFlash = false;
-static uint32_t timeoutAt = 0;
 
 /*
  * Whether we've performed an action that could have made the device busy for writes.
@@ -117,30 +114,15 @@ bool m25p16_isReady(void)
     return !couldBeBusy;
 }
 
-static void m25p16_setTimeout(uint32_t timeoutMillis)
-{
-    uint32_t now = millis();
-    timeoutAt = now + timeoutMillis;
-}
-
 bool m25p16_waitForReady(uint32_t timeoutMillis)
 {
-    uint32_t timeoutAtUse;
-    if (timeoutMillis == 0) {
-        timeoutAtUse = timeoutAt;
-    }
-    else {
-        timeoutAtUse = millis() + timeoutMillis;
-    }
-
+    uint32_t time = millis();
     while (!m25p16_isReady()) {
-        uint32_t now = millis();
-        if (now >= timeoutAtUse) {
+        if (timeoutMillis && (millis() - time > timeoutMillis)) {
             return false;
         }
     }
 
-    timeoutAt = 0;
     return true;
 }
 
@@ -192,8 +174,7 @@ static bool m25p16_readIdentification(void)
 
         case JEDEC_ID_MICRON_N25Q128:
         case JEDEC_ID_WINBOND_W25Q128:
-	    case JEDEC_ID_CYPRESS_S25FL128L:
-        case JEDEC_ID_WINBOND_W25Q128_2:
+	case JEDEC_ID_CYPRESS_S25FL128L:
             geometry.sectors = 256;
             geometry.pagesPerSector = 256;
             break;
@@ -235,6 +216,10 @@ static bool m25p16_readIdentification(void)
  */
 bool m25p16_init(int flashNumToUse)
 {
+    if (busDev) {
+        return true;
+    }
+
     busDev = busDeviceInit(BUSTYPE_SPI, DEVHW_M25P16, flashNumToUse, OWNER_FLASH);
     if (busDev == NULL) {
         return false;
@@ -267,28 +252,20 @@ void m25p16_eraseSector(uint32_t address)
 
     m25p16_setCommandAddress(&out[1], address, isLargeFlash);
 
-    if (!m25p16_waitForReady(0)) {
-        return;
-    }
+    m25p16_waitForReady(SECTOR_ERASE_TIMEOUT_MILLIS);
 
     m25p16_writeEnable();
 
     busTransfer(busDev, NULL, out, isLargeFlash ? 5 : 4);
-
-    m25p16_setTimeout(SECTOR_ERASE_TIMEOUT_MILLIS);
 }
 
 void m25p16_eraseCompletely(void)
 {
-    if (!m25p16_waitForReady(0)) {
-        return;
-    }
+    m25p16_waitForReady(BULK_ERASE_TIMEOUT_MILLIS);
 
     m25p16_writeEnable();
 
     m25p16_performOneByteCommand(M25P16_INSTRUCTION_BULK_ERASE);
-
-    m25p16_setTimeout(BULK_ERASE_TIMEOUT_MILLIS);
 }
 
 /**
@@ -317,16 +294,11 @@ uint32_t m25p16_pageProgram(uint32_t address, const uint8_t *data, int length)
 
     m25p16_setCommandAddress(&command[1], address, isLargeFlash);
 
-    if (!m25p16_waitForReady(0)) {
-        // return same address to indicate timeout
-        return address;
-    }
+    m25p16_waitForReady(DEFAULT_TIMEOUT_MILLIS);
 
     m25p16_writeEnable();
 
     busTransferMultiple(busDev, txn, 2);
-
-    m25p16_setTimeout(DEFAULT_TIMEOUT_MILLIS);
 
     return address + length;
 }
@@ -350,7 +322,7 @@ int m25p16_readBytes(uint32_t address, uint8_t *buffer, int length)
 
     m25p16_setCommandAddress(&command[1], address, isLargeFlash);
 
-    if (!m25p16_waitForReady(0)) {
+    if (!m25p16_waitForReady(DEFAULT_TIMEOUT_MILLIS)) {
         return 0;
     }
 

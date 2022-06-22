@@ -1,1 +1,1 @@
-target_stm32f303xc(SPARKY SKIP_RELEASES)
+target_stm32f303xc(SPARKY)

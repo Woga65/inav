@@ -19,10 +19,6 @@
 
 #pragma once
 
-// Config storage in memory-mapped flash
-extern uint8_t __config_start;
-extern uint8_t __config_end;
-
 // Backward compatibility for I2C OLED display
 #if !defined(USE_I2C)
 # undef USE_DASHBOARD
@@ -31,11 +27,11 @@ extern uint8_t __config_end;
 
 // Enable MSP_DISPLAYPORT for F3 targets without builtin OSD,
 // since it's used to display CMS on MWOSD
-#if !defined(USE_MSP_DISPLAYPORT) && (MCU_FLASH_SIZE > 128) && !defined(USE_OSD)
+#if !defined(USE_MSP_DISPLAYPORT) && (FLASH_SIZE > 128) && !defined(USE_OSD)
 #define USE_MSP_DISPLAYPORT
 #endif
 
-#if defined(USE_OSD) && (MCU_FLASH_SIZE > 256)
+#if defined(USE_OSD) && (FLASH_SIZE > 256)
 #define USE_CANVAS
 #endif
 
@@ -52,24 +48,26 @@ extern uint8_t __config_end;
     #define USE_RPM_FILTER
 #endif
 
+#ifdef USE_ITCM_RAM
+#define FAST_CODE                   __attribute__((section(".tcm_code")))
+#define NOINLINE                    __NOINLINE
+#else
+#define FAST_CODE
+#define NOINLINE
+#endif
+
 #ifdef STM32F3
 #undef USE_WIND_ESTIMATOR
 #undef USE_SERIALRX_SUMD
 #undef USE_SERIALRX_SUMH
 #undef USE_SERIALRX_XBUS
 #undef USE_SERIALRX_JETIEXBUS
+#undef USE_PWM_SERVO_DRIVER
 #endif
-
-#ifndef BEEPER_PWM_FREQUENCY
-#define BEEPER_PWM_FREQUENCY    2500
-#endif
-
-#define USE_ARM_MATH // try to use FPU functions
 
 #if defined(SIMULATOR_BUILD) || defined(UNIT_TEST)
 // This feature uses 'arm_math.h', which does not exist for x86.
 #undef USE_DYNAMIC_FILTERS
-#undef USE_ARM_MATH
 #endif
 
 //Defines for compiler optimizations
@@ -87,19 +85,4 @@ extern uint8_t __config_end;
 #define FILE_COMPILE_FOR_SIZE
 #define FILE_COMPILE_NORMAL
 #define FILE_COMPILE_FOR_SPEED
-#endif
-
-#if defined(CONFIG_IN_RAM) || defined(CONFIG_IN_EXTERNAL_FLASH)
-#ifndef EEPROM_SIZE
-#define EEPROM_SIZE     8192
-#endif
-extern uint8_t eepromData[EEPROM_SIZE];
-#define __config_start (*eepromData)
-#define __config_end (*ARRAYEND(eepromData))
-#else
-#ifndef CONFIG_IN_FLASH
-#define CONFIG_IN_FLASH
-#endif
-extern uint8_t __config_start;   // configured via linker script when building binaries.
-extern uint8_t __config_end;
 #endif

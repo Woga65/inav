@@ -1,1 +1,1 @@
-target_stm32f303xc(FRSKYF3 SKIP_RELEASES)
+target_stm32f303xc(FRSKYF3)

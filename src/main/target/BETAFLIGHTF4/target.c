@@ -23,7 +23,7 @@
 /*#include "drivers/dma.h"*/
 #include "drivers/timer.h"
 
-timerHardware_t timerHardware[] = {
+const timerHardware_t timerHardware[] = {
     DEF_TIM(TIM4, CH3, PB8,  TIM_USE_PPM,                               0, 0), // PPM
 
     // Motors

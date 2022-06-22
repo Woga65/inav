@@ -47,12 +47,12 @@
 #define USE_MAG_IST8310
 #define USE_MAG_IST8308
 #define USE_MAG_LIS3MDL
+#define MAG_HMC5883_ALIGN       CW270_DEG_FLIP
 
 #define TEMPERATURE_I2C_BUS     BUS_I2C2
 
 #define USE_RANGEFINDER
 #define RANGEFINDER_I2C_BUS     BUS_I2C2
-#define BNO055_I2C_BUS          BUS_I2C2
 
 #define USE_BARO
 #define BARO_I2C_BUS            BUS_I2C1
@@ -103,6 +103,8 @@
 
 //#define HIL
 
+#define MAG_GPS_ALIGN           CW180_DEG_FLIP
+
 #define USE_ADC
 #define ADC_CHANNEL_1_PIN               PC0
 #define ADC_CHANNEL_2_PIN               PC1
@@ -116,7 +118,7 @@
 
 #define SENSORS_SET             (SENSOR_ACC|SENSOR_MAG|SENSOR_BARO)
 
-#define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
+#define DEFAULT_RX_TYPE         RX_TYPE_PPM
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -127,3 +129,5 @@
 #define TARGET_IO_PORTB 0xffff
 #define TARGET_IO_PORTC 0xffff
 #define TARGET_IO_PORTD 0xffff
+
+#define PCA9685_I2C_BUS         BUS_I2C2

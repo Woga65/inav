@@ -31,6 +31,7 @@
 
 #define USE_DSHOT
 #define USE_ESC_SENSOR
+#define USE_SERIALSHOT
 
 // MPU6000 interrupts
 #define USE_EXTI
@@ -46,6 +47,7 @@
 #define USE_DUAL_MAG
 #define MAG_I2C_BUS_EXT         BUS_I2C2
 #define MAG_I2C_BUS_INT         BUS_I2C1
+#define MAG_HMC5883_ALIGN       CW90_DEG
 #define USE_MAG_HMC5883
 #define USE_MAG_QMC5883
 #define USE_MAG_IST8310
@@ -54,7 +56,6 @@
 #define USE_MAG_LIS3MDL
 
 #define TEMPERATURE_I2C_BUS     BUS_I2C2
-#define BNO055_I2C_BUS          BUS_I2C2
 
 #define USE_BARO
 #define BARO_I2C_BUS            BUS_I2C1
@@ -129,6 +130,8 @@
 
 #define ENABLE_BLACKBOX_LOGGING_ON_SPIFLASH_BY_DEFAULT
 
+#define MAG_GPS_ALIGN           CW180_DEG_FLIP
+
 #define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
 #define DEFAULT_FEATURES        (FEATURE_TX_PROF_SEL | FEATURE_BLACKBOX)
 
@@ -144,3 +147,5 @@
 #define TARGET_IO_PORTB         0xffff
 #define TARGET_IO_PORTC         0xffff
 #define TARGET_IO_PORTD         0xffff
+
+#define PCA9685_I2C_BUS         BUS_I2C2

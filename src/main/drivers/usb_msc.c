@@ -25,3 +25,8 @@ bool mscCheckBoot(void)
 {
     return (persistentObjectRead(PERSISTENT_OBJECT_RESET_REASON) == RESET_MSC_REQUEST);
 }
+#ifdef USE_SERIALRX_FPORT2
+
+bool fport2RxInit(const rxConfig_t *initialRxConfig, rxRuntimeConfig_t *rxRuntimeConfig);
+
+#endif

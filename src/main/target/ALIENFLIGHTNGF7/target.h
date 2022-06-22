@@ -20,7 +20,7 @@
 
 #define USE_HARDWARE_REVISION_DETECTION
 #define HW_PIN                  PC13
-#define USE_BRUSHED_ESC_AUTODETECT
+#define BRUSHED_ESC_AUTODETECT
 
 #define USBD_PRODUCT_STRING "AlienFlightNG F7"
 
@@ -59,11 +59,13 @@
 #define USE_MAG_IST8308
 #define USE_MAG_LIS3MDL
 
+#define MAG_AK9863_ALIGN        CW0_DEG
+#define MAG_MPU9250_ALIGN       CW0_DEG
+
 #define AK8963_CS_PIN           PC15
 #define AK8963_SPI_BUS          BUS_SPI3
 
 #define TEMPERATURE_I2C_BUS     BUS_I2C1
-#define BNO055_I2C_BUS          BUS_I2C1
 
 #define USE_BARO
 #define BARO_I2C_BUS            BUS_I2C1
@@ -138,6 +140,7 @@
 #define I2C1_SCL                PB6
 #define I2C1_SDA                PB7
 
+#define USE_OSD
 #define USE_MAX7456
 #define MAX7456_SPI_BUS         BUS_SPI3
 #define MAX7456_CS_PIN          PB12

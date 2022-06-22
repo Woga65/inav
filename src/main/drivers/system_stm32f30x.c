@@ -99,6 +99,7 @@ void systemInit(void)
     RCC_ClearFlag();
 
     enableGPIOPowerUsageAndNoiseReductions();
+    memset(extiHandlerConfigs, 0x00, sizeof(extiHandlerConfigs));
 
     // Pre-setup SysTick and system time - final setup is done in systemClockSetup
     systemTimekeepingSetup();

@@ -40,12 +40,10 @@
 #include "drivers/barometer/barometer_ms56xx.h"
 #include "drivers/barometer/barometer_spl06.h"
 #include "drivers/barometer/barometer_dps310.h"
-#include "drivers/barometer/barometer_2smpb_02b.h"
 #include "drivers/barometer/barometer_msp.h"
 #include "drivers/time.h"
 
 #include "fc/runtime_config.h"
-#include "fc/settings.h"
 
 #include "sensors/barometer.h"
 #include "sensors/sensors.h"
@@ -58,15 +56,20 @@
 
 baro_t baro;                        // barometer access functions
 
-#ifdef USE_BARO
-
 PG_REGISTER_WITH_RESET_TEMPLATE(barometerConfig_t, barometerConfig, PG_BAROMETER_CONFIG, 3);
 
+#ifdef USE_BARO
+#define BARO_HARDWARE_DEFAULT    BARO_AUTODETECT
+#else
+#define BARO_HARDWARE_DEFAULT    BARO_NONE
+#endif
 PG_RESET_TEMPLATE(barometerConfig_t, barometerConfig,
-    .baro_hardware = SETTING_BARO_HARDWARE_DEFAULT,
-    .use_median_filtering = SETTING_BARO_MEDIAN_FILTER_DEFAULT,
-    .baro_calibration_tolerance = SETTING_BARO_CAL_TOLERANCE_DEFAULT
+    .baro_hardware = BARO_HARDWARE_DEFAULT,
+    .use_median_filtering = 1,
+    .baro_calibration_tolerance = 150
 );
+
+#ifdef USE_BARO
 
 static zeroCalibrationScalar_t zeroCalibration;
 static float baroGroundAltitude = 0;
@@ -176,19 +179,6 @@ bool baroDetect(baroDev_t *dev, baroSensor_e baroHardwareToUse)
 #if defined(USE_BARO_DPS310)
         if (baroDPS310Detect(dev)) {
             baroHardware = BARO_DPS310;
-            break;
-        }
-#endif
-        /* If we are asked for a specific sensor - break out, otherwise - fall through and continue */
-        if (baroHardwareToUse != BARO_AUTODETECT) {
-            break;
-        }
-        FALLTHROUGH;
-
-    case BARO_B2SMPB:
-#if defined(USE_BARO_B2SMPB)
-        if (baro2SMPB02BDetect(dev)) {
-            baroHardware = BARO_B2SMPB;
             break;
         }
 #endif

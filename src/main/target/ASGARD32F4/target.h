@@ -117,6 +117,7 @@
 #define SPI3_MISO_PIN           PB4
 #define SPI3_MOSI_PIN           PB5
 
+#define USE_OSD
 #define USE_MAX7456
 #define MAX7456_SPI_BUS         BUS_SPI3
 #define MAX7456_CS_PIN          PA15
@@ -142,6 +143,10 @@
 #define DEFAULT_RX_TYPE                 RX_TYPE_SERIAL
 #define SERIALRX_PROVIDER               SERIALRX_SBUS
 
+// Disable PWM & PPM inputs
+#undef USE_RX_PWM
+#undef USE_RX_PPM
+
 // Set default UARTs
 #define TELEMETRY_UART                  SERIAL_PORT_SOFTSERIAL1
 #define SERIALRX_UART                   SERIAL_PORT_USART1
@@ -161,5 +166,5 @@
 #define TARGET_IO_PORTD         0xffff
 
 #define PITOT_I2C_BUS           BUS_I2C2
+#define PCA9685_I2C_BUS         BUS_I2C2
 #define TEMPERATURE_I2C_BUS     BUS_I2C2
-#define BNO055_I2C_BUS          BUS_I2C2
