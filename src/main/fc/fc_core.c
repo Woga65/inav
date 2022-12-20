@@ -663,6 +663,10 @@ void processRx(timeUs_t currentTimeUs)
         DISABLE_STATE(ANTI_WINDUP);
         pidResetErrorAccumulators();
     }
+    // On Collective pitch aircraft like helicopters we prevent I-term wind-up all together 
+    else if (mixerConfig()->auxThrottleChannel) { //sibi
+        ENABLE_STATE(ANTI_WINDUP);
+    }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER) {
         if (throttleStatus == THROTTLE_LOW || throttleStatus == COLLECTIVE_MID) {    //sibi
         // if (throttleStatus == THROTTLE_LOW) {
@@ -708,7 +712,7 @@ void processRx(timeUs_t currentTimeUs)
     else if (rcControlsConfig()->airmodeHandlingType == THROTTLE_THRESHOLD) {
 //        DISABLE_STATE(ANTI_WINDUP);
          //This case applies only to MR when Airmode management is throttle threshold activated
-        if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
+        if ((throttleStatus == THROTTLE_LOW || throttleStatus == COLLECTIVE_MID) && !STATE(AIRMODE_ACTIVE)) {
             if (mixerConfig()->auxThrottleChannel) { //sibi
                 ENABLE_STATE(ANTI_WINDUP);           //sibi
             }                                        //sibi

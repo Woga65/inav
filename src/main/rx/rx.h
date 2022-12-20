@@ -93,8 +93,7 @@ typedef enum {
 #define MAX_AUX_CHANNEL_COUNT (MAX_SUPPORTED_RC_CHANNEL_COUNT - NON_AUX_CHANNEL_COUNT)
 
 extern const char rcChannelLetters[];
-// sibi? #define MAX_MAPPABLE_RX_INPUTS 8
-#define MAX_MAPPABLE_RX_INPUTS 8 //4
+#define MAX_MAPPABLE_RX_INPUTS 4 //either 4 or 8 ?sibi
 
 #define MAX_INVALID_RX_PULSE_TIME    300
 

@@ -110,7 +110,7 @@ throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e
         auxValue = rxGetChannelValue(collectiveThrottleChannel); //sibi
     } else {
         value = rcCommand[THROTTLE];
-        auxValue = rcCommand[collectiveThrottleChannel]; //sibi
+        auxValue = rxGetChannelValue(collectiveThrottleChannel); //sibi
     }
 
     const uint16_t mid_throttle_deadband = rcControlsConfig()->mid_throttle_deadband;

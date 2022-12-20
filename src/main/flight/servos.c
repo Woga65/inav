@@ -49,6 +49,7 @@
 #include "flight/mixer.h"
 #include "flight/pid.h"
 #include "flight/servos.h"
+#include "flight/failsafe.h" //sibi
 
 #include "rx/rx.h"
 
@@ -313,7 +314,7 @@ void servoMixer(float dT)
 #undef GET_RX_CHANNEL_INPUT
 
     int8_t collectiveThrottleChannel = mixerConfig()->auxThrottleChannel;  // sibi
-    if (collectiveThrottleChannel && !ARMING_FLAG(ARMED)) {
+    if (collectiveThrottleChannel && (!ARMING_FLAG(ARMED) || failsafeIsActive())) {
         collectiveThrottleChannel += 7;
         input[collectiveThrottleChannel] = -500;
     }
