@@ -1,2 +1,4 @@
 target_stm32f722xe(MATEKF722PX)
 target_stm32f722xe(MATEKF722WPX)
+target_stm32f722xe(MATEKF722PX_VP)
+target_stm32f722xe(MATEKF722WPX_VP)

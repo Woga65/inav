@@ -72,9 +72,13 @@
 //#define DEBUG_RX_SIGNAL_LOSS
 
 #if (MAX_MAPPABLE_RX_INPUTS == 4) // sibi?
-const char rcChannelLetters[] = "AERT";
+  const char rcChannelLetters[] = "AERT";
 #else
-const char rcChannelLetters[] = "AERT1234";
+  #if defined(USE_VARIABLE_PITCH)
+      const char rcChannelLetters[] = "AERT12CG";
+  #else
+    const char rcChannelLetters[] = "AERT1234";
+  #endif
 #endif
 
 

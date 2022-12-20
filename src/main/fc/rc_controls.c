@@ -48,6 +48,7 @@
 
 #include "flight/pid.h"
 #include "flight/failsafe.h"
+#include "flight/mixer.h" // sibi?
 
 #include "io/gps.h"
 #include "io/beeper.h"
@@ -69,7 +70,7 @@
 
 stickPositions_e rcStickPositions;
 
-FASTRAM int16_t rcCommand[4];           // interval [1000;2000] for THROTTLE and [-500;+500] for ROLL/PITCH/YAW
+FASTRAM int16_t rcCommand[8];           // interval [1000;2000] for THROTTLE and [-500;+500] for ROLL/PITCH/YAW
 
 PG_REGISTER_WITH_RESET_TEMPLATE(rcControlsConfig_t, rcControlsConfig, PG_RC_CONTROLS_CONFIG, 3);
 
@@ -111,17 +112,24 @@ bool isRollPitchStickDeflected(void)
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
     int value;
+    int collValue; // sibi?
     if (type == THROTTLE_STATUS_TYPE_RC) {
         value = rxGetChannelValue(THROTTLE);
+        collValue = rxGetChannelValue(COLLECTIVE);
     } else {
         value = rcCommand[THROTTLE];
+        //collValue = rcCommand[COLLECTIVE]; //todo: implement channels past ch4 (numeric 3) to be handeled by failsafe sibi?
+        collValue = rxGetChannelValue(COLLECTIVE);
     }
 
     const uint16_t mid_throttle_deadband = rcControlsConfig()->mid_throttle_deadband;
     if (feature(FEATURE_REVERSIBLE_MOTORS) && (value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband)))
         return THROTTLE_LOW;
-    else if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))
+    if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))
         return THROTTLE_LOW;
+    if (mixerConfig()->platformType == PLATFORM_HELICOPTER && (collValue > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && collValue < (PWM_RANGE_MIDDLE + mid_throttle_deadband)))
+        return THROTTLE_LOW; // sibi?
+        //return COLLECTIVE_MID;
 
     return THROTTLE_HIGH;
 }
