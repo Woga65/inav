@@ -122,6 +122,12 @@ static EXTENDED_FASTRAM pt1Filter_t fixedWingTpaFilter;
 STATIC_FASTRAM bool pidGainsUpdateRequired;
 FASTRAM int16_t axisPID[FLIGHT_DYNAMICS_INDEX_COUNT];
 
+//sibi? Gyro sensitivity channel for collective pitch
+#if defined(USE_VARIABLE_PITCH)
+static EXTENDED_FASTRAM uint8_t pidAdjustmentChannel = 0;
+#endif
+static EXTENDED_FASTRAM float pidAdjustmentFactor = 1;
+
 #ifdef USE_BLACKBOX
 int32_t axisPID_P[FLIGHT_DYNAMICS_INDEX_COUNT];
 int32_t axisPID_I[FLIGHT_DYNAMICS_INDEX_COUNT];
@@ -171,6 +177,20 @@ static EXTENDED_FASTRAM bool levelingEnabled = false;
 
 static EXTENDED_FASTRAM float fixedWingLevelTrim;
 static EXTENDED_FASTRAM pidController_t fixedWingLevelTrimController;
+
+PG_REGISTER_WITH_RESET_TEMPLATE(pidScaling_t, pidScaling, PG_PID_SCALING, 0);  //sibi?
+
+PG_RESET_TEMPLATE(pidScaling_t, pidScaling,     //sibi?
+    .pid_scaling_factor_p[FD_ROLL] = 1.00,
+    .pid_scaling_factor_p[FD_PITCH] = 1.00,
+    .pid_scaling_factor_p[FD_YAW] = 1.00,
+    .pid_scaling_factor_i[FD_ROLL] = 1.00,
+    .pid_scaling_factor_i[FD_PITCH] = 1.00,
+    .pid_scaling_factor_i[FD_YAW] = 1.00,
+    .pid_scaling_factor_d[FD_ROLL] = 1.00,
+    .pid_scaling_factor_d[FD_PITCH] = 1.00,
+    .pid_scaling_factor_d[FD_YAW] = 1.00
+);
 
 PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 4);
 
@@ -541,9 +561,9 @@ void updatePIDCoefficients()
         }
         else {
             const float axisTPA = (axis == FD_YAW) ? 1.0f : tpaFactor;
-            pidState[axis].kP  = pidBank()->pid[axis].P / FP_PID_RATE_P_MULTIPLIER * axisTPA;
-            pidState[axis].kI  = pidBank()->pid[axis].I / FP_PID_RATE_I_MULTIPLIER;
-            pidState[axis].kD  = pidBank()->pid[axis].D / FP_PID_RATE_D_MULTIPLIER * axisTPA;
+            pidState[axis].kP  = pidBank()->pid[axis].P / FP_PID_RATE_P_MULTIPLIER * pidScaling()->pid_scaling_factor_p[axis] * axisTPA;    //sibi?
+            pidState[axis].kI  = pidBank()->pid[axis].I / FP_PID_RATE_I_MULTIPLIER * pidScaling()->pid_scaling_factor_i[axis];              //sibi?
+            pidState[axis].kD  = pidBank()->pid[axis].D / FP_PID_RATE_D_MULTIPLIER * pidScaling()->pid_scaling_factor_d[axis] * axisTPA;    //sibi?
             pidState[axis].kCD = (pidBank()->pid[axis].FF / FP_PID_RATE_D_FF_MULTIPLIER * axisTPA) / (getLooptime() * 0.000001f);
             pidState[axis].kFF = 0.0f;
 
@@ -835,12 +855,17 @@ static float FAST_CODE applyItermRelax(const int axis, float currentPidSetpoint,
 
 static void FAST_CODE NOINLINE pidApplyMulticopterRateController(pidState_t *pidState, flight_dynamics_index_t axis, float dT)
 {
-
+#if defined(USE_VARIABLE_PITCH)    
+    if (pidAdjustmentChannel) {     //sibi?
+        pidAdjustmentFactor = (scaleRangef((float)rxGetChannelValue(pidAdjustmentChannel), PWM_RANGE_MIN, PWM_RANGE_MAX, 2.0f, 0.0f));
+    }
+#endif
+    
     const float rateTarget = getFlightAxisRateOverride(axis, pidState->rateTarget);
 
     const float rateError = rateTarget - pidState->gyroRate;
-    const float newPTerm = pTermProcess(pidState, rateError, dT);
-    const float newDTerm = dTermProcess(pidState, rateTarget, dT);
+    const float newPTerm = pTermProcess(pidState, rateError, dT) * pidAdjustmentFactor;   //sibi?;
+    const float newDTerm = dTermProcess(pidState, rateTarget, dT) * pidAdjustmentFactor;   //sibi?;
 
     const float rateTargetDelta = rateTarget - pidState->previousRateTarget;
     const float rateTargetDeltaFiltered = pt3FilterApply(&pidState->rateTargetFilter, rateTargetDelta);
@@ -848,7 +873,7 @@ static void FAST_CODE NOINLINE pidApplyMulticopterRateController(pidState_t *pid
     /*
      * Compute Control Derivative
      */
-    const float newCDTerm = rateTargetDeltaFiltered * pidState->kCD;
+    const float newCDTerm = rateTargetDeltaFiltered * pidState->kCD * pidAdjustmentFactor;   //sibi?;
 
     // TODO: Get feedback from mixer on available correction range for each axis
     const float newOutput = newPTerm + newDTerm + pidState->errorGyroIf + newCDTerm;
@@ -1201,6 +1226,11 @@ pidType_e pidIndexGetType(pidIndex_e pidIndex)
 
 void pidInit(void)
 {
+    //sibi?
+    pidAdjustmentFactor = 1;
+#if defined(USE_VARIABLE_PITCH)    
+    pidAdjustmentChannel = mixerConfig()->platformType == PLATFORM_HELICOPTER ? GYRO_GAIN : 0;
+#endif    
     // Calculate max overall tilt (max pitch + max roll combined) as a limit to heading hold
     headingHoldCosZLimit = cos_approx(DECIDEGREES_TO_RADIANS(pidProfile()->max_angle_inclination[FD_ROLL])) *
                            cos_approx(DECIDEGREES_TO_RADIANS(pidProfile()->max_angle_inclination[FD_PITCH]));

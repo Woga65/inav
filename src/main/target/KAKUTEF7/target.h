@@ -20,12 +20,16 @@
 
 #pragma once
 
-#ifdef KAKUTEF7MINI
+#if defined(KAKUTEF7MINI) || defined(KAKUTEF7MINI_VP) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS_VP) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS) || defined (KAKUTEF7MINI_7PWM_VP) || defined (KAKUTEF7MINI_7PWM)   //sibi?
 #define TARGET_BOARD_IDENTIFIER "KF7M"
 #define USBD_PRODUCT_STRING "KakuteF7-Mini"
 #else
 #define TARGET_BOARD_IDENTIFIER "KTF7"
 #define USBD_PRODUCT_STRING "KakuteF7"
+#endif
+
+#if defined(KAKUTEF7_VP) || defined(KAKUTEF7MINI_VP) || defined(KAKUTEF7HDV_VP) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS_VP) || defined(KAKUTEF7MINI_7PWM_VP) || defined(KAKUTEF7_1MOTOR_6SERVOS_VP) || defined(KAKUTEF7_7PWM_VP)     //sibi?
+ #define USE_VARIABLE_PITCH
 #endif
 
 #define LED0                PA2
@@ -105,13 +109,13 @@
 #define SPI4_MOSI_PIN           PE6
 
 
-#ifndef KAKUTEF7HDV
+#if !defined(KAKUTEF7HDV) && !defined(KAKUTEF7HDV_VP)   //sibi?
 #define USE_MAX7456
 #define MAX7456_SPI_BUS         BUS_SPI2
 #define MAX7456_CS_PIN          SPI2_NSS_PIN
 #endif
 
-#if defined(KAKUTEF7MINI)
+#if defined(KAKUTEF7MINI) || defined(KAKUTEF7MINI_VP) || defined(KAKUTEF7MINI_1MOTOR_6SERVOS) || defined (KAKUTEF7MINI_1MOTOR_6SERVOS_VP) || defined(KAKUTEF7MINI_7PWM) || defined(KAKUTEF7MINI_7PWM_VP)  //sibi?
 #define M25P16_CS_PIN           SPI1_NSS_PIN
 #define M25P16_SPI_BUS          BUS_SPI1
 #define USE_FLASHFS

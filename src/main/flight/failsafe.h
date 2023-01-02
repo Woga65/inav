@@ -151,7 +151,7 @@ typedef struct failsafeState_s {
     failsafeProcedure_e activeProcedure;
     failsafePhase_e phase;
     failsafeRxLinkState_e rxLinkState;
-    int16_t lastGoodRcCommand[4];
+    int16_t lastGoodRcCommand[8];
 } failsafeState_t;
 
 void failsafeInit(void);
