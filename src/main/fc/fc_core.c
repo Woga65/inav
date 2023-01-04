@@ -221,14 +221,14 @@ static void updateArmingStatus(void)
             }
         }
 
-	/* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
-	if (isNavLaunchEnabled()) {
-	  if (isRollPitchStickDeflected()) {
-	    ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
-	  } else {
-	    DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
-	  }
-	}
+        /* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
+        if (isNavLaunchEnabled()) {
+            if (isRollPitchStickDeflected(rcControlsConfig()->control_deadband)) {
+                ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
+            } else {
+                DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
+            }
+        }
 
         /* CHECK: Angle */
         if (!STATE(SMALL_ANGLE)) {
@@ -265,26 +265,7 @@ static void updateArmingStatus(void)
 #endif
 
         /* CHECK: */
-        if (
-            sensors(SENSOR_ACC) && 
-            !STATE(ACCELEROMETER_CALIBRATED) &&
-            // Require ACC calibration only if any of the setting might require it
-            (
-                isModeActivationConditionPresent(BOXNAVPOSHOLD) ||
-                isModeActivationConditionPresent(BOXNAVRTH) ||
-                isModeActivationConditionPresent(BOXNAVWP) ||
-                isModeActivationConditionPresent(BOXANGLE) ||
-                isModeActivationConditionPresent(BOXHORIZON) ||
-                isModeActivationConditionPresent(BOXNAVALTHOLD) ||
-                isModeActivationConditionPresent(BOXHEADINGHOLD) ||
-                isModeActivationConditionPresent(BOXNAVLAUNCH) ||
-                isModeActivationConditionPresent(BOXTURNASSIST) ||
-                isModeActivationConditionPresent(BOXNAVCOURSEHOLD) ||
-                isModeActivationConditionPresent(BOXSOARING) ||
-                failsafeConfig()->failsafe_procedure != FAILSAFE_PROCEDURE_DROP_IT
-
-            )
-        ) {
+        if (sensors(SENSOR_ACC) && !STATE(ACCELEROMETER_CALIBRATED)) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_ACCELEROMETER_NOT_CALIBRATED);
         }
         else {

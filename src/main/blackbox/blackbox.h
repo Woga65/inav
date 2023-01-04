@@ -31,7 +31,6 @@ typedef enum {
     BLACKBOX_FEATURE_RC_DATA        = 1 << 6,
     BLACKBOX_FEATURE_RC_COMMAND     = 1 << 7,
     BLACKBOX_FEATURE_MOTORS         = 1 << 8,
-    BLACKBOX_FEATURE_GYRO_RAW       = 1 << 9,
 } blackboxFeatureMask_e;
 
 

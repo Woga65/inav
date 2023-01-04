@@ -34,7 +34,10 @@
 typedef enum {
     GPS_NMEA = 0,
     GPS_UBLOX,
+    GPS_I2CNAV,
+    GPS_NAZA,
     GPS_UBLOX7PLUS,
+    GPS_MTK,
     GPS_MSP,
     GPS_PROVIDER_COUNT
 } gpsProvider_e;
@@ -151,6 +154,7 @@ extern gpsSolutionData_t gpsSol;
 extern gpsStatistics_t   gpsStats;
 
 struct magDev_s;
+bool gpsMagDetect(struct magDev_s *mag);
 void gpsPreInit(void);
 void gpsInit(void);
 // Called periodically from GPS task. Returns true iff the GPS

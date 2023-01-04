@@ -1,1 +1,1 @@
-target_stm32f405xg(AIKONF4 SKIP_RELEASES)
+target_stm32f405xg(AIKONF4)

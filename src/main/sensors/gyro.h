@@ -48,7 +48,6 @@ typedef struct gyro_s {
     bool initialized;
     uint32_t targetLooptime;
     float gyroADCf[XYZ_AXIS_COUNT];
-    float gyroRaw[XYZ_AXIS_COUNT];
 } gyro_t;
 
 extern gyro_t gyro;

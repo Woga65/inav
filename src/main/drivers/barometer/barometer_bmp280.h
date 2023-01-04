@@ -17,6 +17,7 @@
 
 #pragma once
 
+#define BMP280_I2C_ADDR                      (0x76)
 #define BMP280_DEFAULT_CHIP_ID               (0x58)
 #define BME280_DEFAULT_CHIP_ID               (0x60)
 

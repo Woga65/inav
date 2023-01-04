@@ -1414,7 +1414,7 @@ Yaw Iterm is frozen when bank angle is above this threshold [degrees]. This solv
 
 ### gps_auto_baud
 
-Automatic configuration of GPS baudrate(The specified baudrate in configured in ports will be used) when used with UBLOX GPS
+Automatic configuration of GPS baudrate(The specified baudrate in configured in ports will be used) when used with UBLOX GPS. When used with NAZA/DJI it will automatic detect GPS baudrate and change to it, ignoring the selected baudrate set in ports
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3022,6 +3022,16 @@ Dive angle that airplane will use during final landing phase. During dive phase,
 
 ---
 
+### nav_fw_launch_abort_deadband
+
+Launch abort stick deadband in [r/c points], applied after r/c deadband and expo. The Roll/Pitch stick needs to be deflected beyond this deadband to abort the launch.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 100 | 2 | 250 |
+
+---
+
 ### nav_fw_launch_accel
 
 Forward acceleration threshold for bungee launch of throw launch [cm/s/s], 1G = 981 cm/s/s
@@ -3869,26 +3879,6 @@ If set to ON drone will return tail-first. Obviously meaningless for airplanes.
 | Default | Min | Max |
 | --- | --- | --- |
 | OFF | OFF | ON |
-
----
-
-### nav_rth_trackback_distance
-
-Maximum distance allowed for RTH trackback. Normal RTH is executed once this distance is exceeded [m].
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 500 | 50 | 2000 |
-
----
-
-### nav_rth_trackback_mode
-
-Useage modes for RTH Trackback. OFF = disabled, ON = Normal and Failsafe RTH, FS = Failsafe RTH only.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| OFF |  |  |
 
 ---
 

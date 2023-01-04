@@ -103,10 +103,7 @@
     #if !defined(BMP280_I2C_BUS)
         #define BMP280_I2C_BUS BARO_I2C_BUS
     #endif
-    #if !defined(BMP280_I2C_ADDR)
-        #define BMP280_I2C_ADDR (0x76)
-    #endif
-    BUSDEV_REGISTER_I2C(busdev_bmp280,      DEVHW_BMP280,       BMP280_I2C_BUS,     BMP280_I2C_ADDR,	NONE,           DEVFLAGS_NONE,      0);
+    BUSDEV_REGISTER_I2C(busdev_bmp280,      DEVHW_BMP280,       BMP280_I2C_BUS,     0x76,               NONE,           DEVFLAGS_NONE,      0);
     #endif
 #endif
 
@@ -371,6 +368,10 @@
 
 #if defined(USE_FLASH_M25P16)
     BUSDEV_REGISTER_SPI(busdev_m25p16,      DEVHW_M25P16,       M25P16_SPI_BUS,     M25P16_CS_PIN,      NONE,           DEVFLAGS_NONE,  0);
+#endif
+
+#if defined(USE_FLASH_W25N01G)
+    BUSDEV_REGISTER_SPI(busdev_w25n01g,     DEVHW_W25N01G,      W25N01G_SPI_BUS,    W25N01G_CS_PIN,     NONE,           DEVFLAGS_NONE,  0);
 #endif
 
 #if defined(USE_SDCARD) && defined(USE_SDCARD_SPI)

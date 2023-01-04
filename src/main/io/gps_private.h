@@ -71,8 +71,12 @@ void gpsSetProtocolTimeout(timeMs_t timeoutMs);
 extern void gpsRestartUBLOX(void);
 extern void gpsHandleUBLOX(void);
 
-extern void gpsRestartNMEA(void);
+extern void gpsRestartNMEA_MTK(void);
 extern void gpsHandleNMEA(void);
+extern void gpsHandleMTK(void);
+
+extern void gpsRestartNAZA(void);
+extern void gpsHandleNAZA(void);
 
 extern void gpsRestartMSP(void);
 extern void gpsHandleMSP(void);
