@@ -747,7 +747,7 @@ void processRx(timeUs_t currentTimeUs)
         pidResetErrorAccumulators();
     }
     // On Collective pitch aircraft like helicopters we prevent I-term wind-up all together //?sibi
-    else if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
+    else if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {  //sibi?
         ENABLE_STATE(ANTI_WINDUP);        
     }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER) {
