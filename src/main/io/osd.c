@@ -197,7 +197,7 @@ static bool osdDisplayHasCanvas;
 
 #define AH_MAX_PITCH_DEFAULT 20 // Specify default maximum AHI pitch value displayed (degrees)
 
-PG_REGISTER_WITH_RESET_TEMPLATE(osdConfig_t, osdConfig, PG_OSD_CONFIG, 6);
+PG_REGISTER_WITH_RESET_TEMPLATE(osdConfig_t, osdConfig, PG_OSD_CONFIG, 7);
 PG_REGISTER_WITH_RESET_FN(osdLayoutsConfig_t, osdLayoutsConfig, PG_OSD_LAYOUTS_CONFIG, 1);
 
 static int digitCount(int32_t value)
@@ -920,11 +920,7 @@ static const char * navigationStateMessage(void)
         case MW_NAV_STATE_RTH_CLIMB:
             return OSD_MESSAGE_STR(OSD_MSG_RTH_CLIMB);
         case MW_NAV_STATE_RTH_ENROUTE:
-            if (posControl.flags.rthTrackbackActive) {
-                return OSD_MESSAGE_STR(OSD_MSG_RTH_TRACKBACK);
-            } else {
-                return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
-            }
+            return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
         case MW_NAV_STATE_HOLD_INFINIT:
             // Used by HOLD flight modes. No information to add.
             break;
@@ -1538,7 +1534,7 @@ void osdDisplaySwitchIndicator(const char *swName, int rcValue, char *buff) {
 
         ptr++;
     }
-
+    
     buff[ptr] = '\0';
 }
 

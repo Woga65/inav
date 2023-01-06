@@ -76,10 +76,10 @@ gpsSolutionData_t gpsSol;
 // Map gpsBaudRate_e index to baudRate_e
 baudRate_e gpsToSerialBaudRate[GPS_BAUDRATE_COUNT] = { BAUD_115200, BAUD_57600, BAUD_38400, BAUD_19200, BAUD_9600, BAUD_230400 };
 
-static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
+static gpsProviderDescriptor_t  gpsProviders[GPS_PROVIDER_COUNT] = {
     /* NMEA GPS */
 #ifdef USE_GPS_PROTO_NMEA
-    { false, MODE_RX, false, &gpsRestartNMEA, &gpsHandleNMEA },
+    { false, MODE_RX, false, &gpsRestartNMEA_MTK, &gpsHandleNMEA },
 #else
     { false, 0, false,  NULL, NULL },
 #endif
@@ -90,6 +90,9 @@ static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
 #else
     { false, 0, false,  NULL, NULL },
 #endif
+
+    /* Stub */
+    { false, 0, false,  NULL, NULL },
 
     /* NAZA GPS module */
 #ifdef USE_GPS_PROTO_NAZA
@@ -105,6 +108,13 @@ static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
     { false, 0, false,  NULL, NULL },
 #endif
 
+    /* MTK GPS */
+#ifdef USE_GPS_PROTO_MTK
+    { false, MODE_RXTX, false, &gpsRestartNMEA_MTK, &gpsHandleMTK },
+#else
+    { false, 0, false,  NULL, NULL },
+#endif
+
     /* MSP GPS */
 #ifdef USE_GPS_PROTO_MSP
     { true, 0, false, &gpsRestartMSP, &gpsHandleMSP },
@@ -113,7 +123,7 @@ static gpsProviderDescriptor_t gpsProviders[GPS_PROVIDER_COUNT] = {
 #endif
 };
 
-PG_REGISTER_WITH_RESET_TEMPLATE(gpsConfig_t, gpsConfig, PG_GPS_CONFIG, 1);
+PG_REGISTER_WITH_RESET_TEMPLATE(gpsConfig_t, gpsConfig, PG_GPS_CONFIG, 0);
 
 PG_RESET_TEMPLATE(gpsConfig_t, gpsConfig,
     .provider = SETTING_GPS_PROVIDER_DEFAULT,

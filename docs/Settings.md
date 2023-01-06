@@ -2834,11 +2834,11 @@ Protocol that is used to send motor updates to ESCs. Possible values - STANDARD,
 
 ### motor_pwm_rate
 
-Output frequency (in Hz) for motor pins. Default is 400Hz for motor with motor_pwm_protocol set to STANDARD. For *SHOT (e.g. ONESHOT125) values of 1000 and 2000 have been tested by the development team and are supported. It may be possible to use higher values. For BRUSHED values of 8000 and above should be used. Setting to 8000 will use brushed mode at 8kHz switching frequency. Up to 32kHz is supported for brushed. Default is 16000 for boards with brushed motors. Note, that in brushed mode, minthrottle is offset to zero. For brushed mode, set max_throttle to 2000.
+Output frequency (in Hz) for motor pins.  Applies only to brushed motors. 
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 400 | 50 | 32000 |
+| 16000 | 50 | 32000 |
 
 ---
 
@@ -3019,6 +3019,16 @@ Dive angle that airplane will use during final landing phase. During dive phase,
 | Default | Min | Max |
 | --- | --- | --- |
 | 2 | -20 | 20 |
+
+---
+
+### nav_fw_launch_abort_deadband
+
+Launch abort stick deadband in [r/c points], applied after r/c deadband and expo. The Roll/Pitch stick needs to be deflected beyond this deadband to abort the launch.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 100 | 2 | 250 |
 
 ---
 
@@ -3869,26 +3879,6 @@ If set to ON drone will return tail-first. Obviously meaningless for airplanes.
 | Default | Min | Max |
 | --- | --- | --- |
 | OFF | OFF | ON |
-
----
-
-### nav_rth_trackback_distance
-
-Maximum distance allowed for RTH trackback. Normal RTH is executed once this distance is exceeded [m].
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 500 | 50 | 2000 |
-
----
-
-### nav_rth_trackback_mode
-
-Useage modes for RTH Trackback. OFF = disabled, ON = Normal and Failsafe RTH, FS = Failsafe RTH only.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| OFF |  |  |
 
 ---
 
