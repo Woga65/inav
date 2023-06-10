@@ -712,7 +712,7 @@ void osdDJIFormatVelocityStr(char* buff)
 }
 static void osdDJIFormatThrottlePosition(char *buff, bool autoThr )
 {
-    int16_t thr = rxGetChannelValue(THROTTLE);
+    int16_t thr = rxGetChannelValue(THROTTLE); //sibi!!?
     if (autoThr && navigationIsControllingThrottle()) {
         thr = rcCommand[THROTTLE];
     }

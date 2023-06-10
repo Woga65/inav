@@ -45,7 +45,7 @@ typedef enum rc_alias {
 typedef enum {
     THROTTLE_LOW = 0,
     THROTTLE_HIGH,
-    COLLECTIVE_MID  // sibi?
+    COLLECTIVE_MID  // sibi? sibi!!?
 } throttleStatus_e;
 
 typedef enum {
@@ -82,7 +82,7 @@ typedef enum {
     THR_HI = (2 << (2 * THROTTLE))
 } stickPositions_e;
 
-extern int16_t rcCommand[8];
+extern int16_t rcCommand[8]; //sibi!!
 
 typedef struct rcControlsConfig_s {
     uint8_t deadband;                       // introduce a deadband around the stick center for pitch and roll axis. Must be greater than zero.

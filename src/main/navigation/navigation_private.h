@@ -393,7 +393,7 @@ typedef struct {
     bool                        wpAltitudeReached;          // WP altitude achieved
 
     /* Internals & statistics */
-    int16_t                     rcAdjustment[4];
+    int16_t                     rcAdjustment[8]; //sibi!!
     float                       totalTripDistance;
 } navigationPosControl_t;
 
@@ -493,3 +493,8 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs);
  * Rover specific functions
  */
 void applyRoverBoatNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
+
+/* 
+ * Helicopter specific functions sibi!! 
+ */
+

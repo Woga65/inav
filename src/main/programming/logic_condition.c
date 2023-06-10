@@ -522,7 +522,7 @@ static int logicConditionGetFlightOperandValue(int operand) {
         case LOGIC_CONDITION_OPERAND_FLIGHT_TROTTLE_POS: // %
             return (constrain(rcCommand[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX) - PWM_RANGE_MIN) * 100 / (PWM_RANGE_MAX - PWM_RANGE_MIN);
             break;
-
+//collective? //sibi!!?
         case LOGIC_CONDITION_OPERAND_FLIGHT_ATTITUDE_ROLL: // deg
             return constrain(attitude.values.roll / 10, -180, 180);
             break;

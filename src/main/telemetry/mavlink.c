@@ -653,7 +653,7 @@ void mavlinkSendHUDAndHeartbeat(void)
     mavAltitude = getEstimatedActualPosition(Z) / 100.0f;
     mavClimbRate = getEstimatedActualVelocity(Z) / 100.0f;
 
-    int16_t thr = rxGetChannelValue(THROTTLE);
+    int16_t thr = rxGetChannelValue(THROTTLE); //sibi!!
     if (navigationIsControllingThrottle()) {
         thr = rcCommand[THROTTLE];
     }

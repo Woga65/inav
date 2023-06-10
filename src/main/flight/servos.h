@@ -63,7 +63,9 @@ typedef enum {
     INPUT_GVAR_6                    = 36,
     INPUT_GVAR_7                    = 37,
 
-    INPUT_SOURCE_COUNT
+    INPUT_SOURCE_COUNT,
+    INPUT_RC_COLLECTIVE             = INPUT_RC_CH7, //sibi!!
+    INPUT_RC_GYRO_GAIN              = INPUT_RC_CH8
 } inputSource_e;
 
 // target servo channels

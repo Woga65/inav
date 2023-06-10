@@ -47,12 +47,12 @@
 
 #include "flight/mixer.h"
 
-static biquadFilter_t rcSmoothFilter[4];
-static float rcStickUnfiltered[4];
+static biquadFilter_t rcSmoothFilter[8]; //sibi!!
+static float rcStickUnfiltered[8]; //sibi!!
 
 static void rcInterpolationInit(int rcFilterFreqency)
 {
-    for (int stick = 0; stick < 4; stick++) {
+    for (int stick = 0; stick < 8; stick++) {
         biquadFilterInitLPF(&rcSmoothFilter[stick], rcFilterFreqency, getLooptime());
     }
 }
@@ -69,7 +69,7 @@ void rcInterpolationApply(bool isRXDataNew)
             initDone = true;
         }
 
-        for (int stick = 0; stick < 4; stick++) {
+        for (int stick = 0; stick < 8; stick++) { //sibi!!
             rcStickUnfiltered[stick] = rcCommand[stick];
         }
     }
@@ -79,7 +79,7 @@ void rcInterpolationApply(bool isRXDataNew)
         return;
     }
 
-    for (int stick = 0; stick < 4; stick++) {
+    for (int stick = 0; stick < 8; stick++) { //sibi!!
         rcCommand[stick] = biquadFilterApply(&rcSmoothFilter[stick], rcStickUnfiltered[stick]);
     }
 }

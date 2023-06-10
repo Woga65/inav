@@ -41,6 +41,7 @@
 #include "flight/pid.h"
 #include "flight/imu.h"
 #include "flight/hil.h"
+#include "flight/mixer.h" //sibi!!
 
 #include "fc/config.h"
 #include "fc/runtime_config.h"
@@ -53,7 +54,7 @@ bool hilActive = false;
 hilIncomingStateData_t hilToFC;
 hilOutgoingStateData_t hilToSIM;
 
-void hilUpdateControlState(void)
+void hilUpdateControlState(void) //sibi!!?
 {
     // FIXME: There must be a cleaner way to to this
     // If HIL active, store PID outout into hilState and disable motor control
@@ -68,6 +69,11 @@ void hilUpdateControlState(void)
     }
 
     hilToSIM.pidCommand[THROTTLE] = rcCommand[THROTTLE];
+#if defined(USE_VARIABLE_PITCH)
+    if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
+        hilToSIM.pidCommand[COLLECTIVE] = rcCommand[COLLECTIVE];
+    }
+#endif
 }
 
 #endif

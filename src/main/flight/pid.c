@@ -486,8 +486,13 @@ static float calculateFixedWingTPAFactor(uint16_t throttle)
     return tpaFactor;
 }
 
-static float calculateMultirotorTPAFactor(void)
+static float calculateMultirotorTPAFactor(void) //no TPA for helicopter sibi!!
 {
+#if defined(USE_VARIABLE_PITCH)
+    if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
+        return 1.0f;
+    }
+#endif
     float tpaFactor;
 
     // TPA should be updated only when TPA is actually set
@@ -519,7 +524,7 @@ void updatePIDCoefficients()
             pidGainsUpdateRequired = true;
         }
     }
-    else {
+    else { //sibi!!?
         if (rcCommand[THROTTLE] != prevThrottle) {
             prevThrottle = rcCommand[THROTTLE];
             pidGainsUpdateRequired = true;
@@ -527,7 +532,7 @@ void updatePIDCoefficients()
     }
 
 #ifdef USE_ANTIGRAVITY
-    if (usedPidControllerType == PID_TYPE_PID) {
+    if (usedPidControllerType == PID_TYPE_PID) { //should not apply to helicopter. Probably use collective? sibi!!?
         antigravityThrottleHpf = rcCommand[THROTTLE] - pt1FilterApply(&antigravityThrottleLpf, rcCommand[THROTTLE]);
         iTermAntigravityGain = scaleRangef(fabsf(antigravityThrottleHpf) * antigravityAccelerator, 0.0f, 1000.0f, 1.0f, antigravityGain);
     }

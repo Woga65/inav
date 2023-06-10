@@ -319,6 +319,13 @@ void servoMixer(float dT)
     input[INPUT_RC_CH15]     = GET_RX_CHANNEL_INPUT(AUX11);
     input[INPUT_RC_CH16]     = GET_RX_CHANNEL_INPUT(AUX12);
 #undef GET_RX_CHANNEL_INPUT
+    
+#if defined(USE_VARIABLE_PITCH) //sibi!!
+    if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
+        input[INPUT_RC_COLLECTIVE] = rcCommand[COLLECTIVE] - 1000 - 500;
+        input[INPUT_RC_GYRO_GAIN] = rcCommand[GYRO_GAIN] - 1000 - 500;
+    }
+#endif
 
     for (int i = 0; i < MAX_SUPPORTED_SERVOS; i++) {
         servo[i] = 0;

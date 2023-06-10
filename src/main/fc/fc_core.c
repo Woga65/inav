@@ -371,7 +371,7 @@ static bool emergencyArmingIsEnabled(void)
     return emergencyArmingIsTriggered() && emergencyArmingCanOverrideArmingDisabled();
 }
 
-void annexCode(float dT)
+void annexCode(float dT) //sibi!!
 {
     if (failsafeShouldApplyControlInput()) {
         // Failsafe will apply rcCommand for us
@@ -404,8 +404,15 @@ void annexCode(float dT)
         }
 
         //Compute THROTTLE command
-        rcCommand[THROTTLE] = throttleStickMixedValue();
-
+        rcCommand[THROTTLE] = throttleStickMixedValue(); //sibi!!
+//#if defined(USE_VARIABLE_PITCH)
+//        if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
+            rcCommand[AUX1] = constrain(rxGetChannelValue(AUX1), PWM_RANGE_MIN, PWM_RANGE_MAX);
+            rcCommand[AUX2] = constrain(rxGetChannelValue(AUX2), PWM_RANGE_MIN, PWM_RANGE_MAX);
+            rcCommand[COLLECTIVE] = constrain(rxGetChannelValue(COLLECTIVE), PWM_RANGE_MIN, PWM_RANGE_MAX);
+            rcCommand[GYRO_GAIN] = constrain(rxGetChannelValue(GYRO_GAIN), PWM_RANGE_MIN, PWM_RANGE_MAX);
+//        }
+//#endif
         // Signal updated rcCommand values to Failsafe system
         failsafeUpdateRcCommandValues();
 
@@ -747,7 +754,7 @@ void processRx(timeUs_t currentTimeUs)
         pidResetErrorAccumulators();
     }
     // On Collective pitch aircraft like helicopters we prevent I-term wind-up all together //?sibi
-    else if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {  //sibi?
+    else if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {  //sibi!?
         ENABLE_STATE(ANTI_WINDUP);        
     }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER) {

@@ -112,25 +112,30 @@ bool isRollPitchStickDeflected(uint8_t deadband)
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
     int value;
-    int collValue; // sibi?
     if (type == THROTTLE_STATUS_TYPE_RC) {
         value = rxGetChannelValue(THROTTLE);
-        collValue = rxGetChannelValue(COLLECTIVE);
     } else {
         value = rcCommand[THROTTLE];
-        //collValue = rcCommand[COLLECTIVE]; //todo: implement channels past ch4 (numeric 3) to be handeled by failsafe sibi?
-        collValue = rxGetChannelValue(COLLECTIVE);
     }
-
+#if defined(USE_VARIABLE_PITCH)
+    int collValue; // sibi?
+    if (type == THROTTLE_STATUS_TYPE_RC) {
+        collValue = rxGetChannelValue(COLLECTIVE);
+    } else {
+        collValue = rcCommand[COLLECTIVE]; //sibi!!
+        //collValue = rxGetChannelValue(COLLECTIVE);
+    }
+#endif
+    
     const uint16_t mid_throttle_deadband = rcControlsConfig()->mid_throttle_deadband;
     if (feature(FEATURE_REVERSIBLE_MOTORS) && (value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband)))
         return THROTTLE_LOW;
     if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))
         return THROTTLE_LOW;
+#if defined(USE_VARIABLE_PITCH)
     if (mixerConfig()->platformType == PLATFORM_HELICOPTER && (collValue > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && collValue < (PWM_RANGE_MIDDLE + mid_throttle_deadband)))
-        return THROTTLE_LOW; // sibi?
-        //return COLLECTIVE_MID;
-
+        return THROTTLE_LOW; // sibi? //return COLLECTIVE_MID; //sibi!!?
+#endif
     return THROTTLE_HIGH;
 }
 

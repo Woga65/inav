@@ -253,12 +253,12 @@ static const blackboxDeltaFieldDefinition_t blackboxMainFields[] = {
     {"mcSurfaceD", -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(MC_NAV)},
     {"mcSurfaceOut",-1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), CONDITION(MC_NAV)},
 
-    /* rcData are encoded together as a group: */
+    /* rcData are encoded together as a group: sibi!! */
     {"rcData",      0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_DATA},
     {"rcData",      1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_DATA},
     {"rcData",      2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_DATA},
     {"rcData",      3, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_DATA},
-    /* rcCommands are encoded together as a group in P-frames: */
+    /* rcCommands are encoded together as a group in P-frames: sibi!! */
     {"rcCommand",   0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_COMMAND},
     {"rcCommand",   1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_COMMAND},
     {"rcCommand",   2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_4S16), FLIGHT_LOG_FIELD_CONDITION_RC_COMMAND},
@@ -456,8 +456,8 @@ typedef struct blackboxMainState_s {
     int32_t fwPosPID[3];
     int32_t fwPosPIDOutput;
 
-    int16_t rcData[4];
-    int16_t rcCommand[4];
+    int16_t rcData[8];      // [4] sibi??
+    int16_t rcCommand[8];   // [4] sibi??
     int16_t gyroADC[XYZ_AXIS_COUNT];
     int16_t accADC[XYZ_AXIS_COUNT];
     int16_t attitude[XYZ_AXIS_COUNT];
@@ -789,18 +789,18 @@ static void writeIntraframe(void)
         blackboxWriteSignedVB(blackboxCurrent->mcSurfacePIDOutput);
     }
 
-    // Write raw stick positions
+    // Write raw stick positions //sibi!!
     if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_RC_DATA)) {
         blackboxWriteSigned16VBArray(blackboxCurrent->rcData, 4);
     }
 
-    // Write roll, pitch and yaw first:
+    // Write roll, pitch and yaw first: //sibi!!
     if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_RC_COMMAND)) {
         blackboxWriteSigned16VBArray(blackboxCurrent->rcCommand, 3);
 
         /*
         * Write the throttle separately from the rest of the RC data so we can apply a predictor to it.
-        * Throttle lies in range [minthrottle..maxthrottle]:
+        * Throttle lies in range [minthrottle..maxthrottle]: //sibi!!
         */
         blackboxWriteUnsignedVB(blackboxCurrent->rcCommand[THROTTLE] - getThrottleIdleValue());
     }
@@ -1036,7 +1036,7 @@ static void writeInterframe(void)
 
     // rcData
     if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_RC_DATA)) {
-        for (int x = 0; x < 4; x++) {
+        for (int x = 0; x < 4; x++) { //sibi!!
             deltas[x] = blackboxCurrent->rcData[x] - blackboxLast->rcData[x];
         }
 
@@ -1045,7 +1045,7 @@ static void writeInterframe(void)
 
     // rcCommand
     if (testBlackboxCondition(FLIGHT_LOG_FIELD_CONDITION_RC_COMMAND)) {
-        for (int x = 0; x < 4; x++) {
+        for (int x = 0; x < 4; x++) { //sibi!!
             deltas[x] = blackboxCurrent->rcCommand[x] - blackboxLast->rcCommand[x];
         }
 
@@ -1509,7 +1509,7 @@ static void loadMainState(timeUs_t currentTimeUs)
         blackboxCurrent->mcSurfacePIDOutput = lrintf(nav_pids->surface.output_constrained / 10);
     }
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) { //sibi!!
         blackboxCurrent->rcData[i] = rxGetChannelValue(i);
         blackboxCurrent->rcCommand[i] = rcCommand[i];
     }

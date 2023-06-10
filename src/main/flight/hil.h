@@ -30,7 +30,7 @@ typedef struct {
 } hilIncomingStateData_t;
 
 typedef struct {
-    int16_t     pidCommand[4];
+    int16_t     pidCommand[8]; //sibi!!?
 } hilOutgoingStateData_t;
 
 extern bool hilActive;

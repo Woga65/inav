@@ -92,7 +92,7 @@ typedef enum {
 typedef struct {
     bool                        bypassNavigation;
     bool                        forceAngleMode;
-    failsafeChannelBehavior_e   channelBehavior[4];
+    failsafeChannelBehavior_e   channelBehavior[8]; //sibi!!
 } failsafeProcedureLogic_t;
 
 static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
@@ -103,7 +103,11 @@ static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
                 FAILSAFE_CHANNEL_NEUTRAL,       // ROLL
                 FAILSAFE_CHANNEL_NEUTRAL,       // PITCH
                 FAILSAFE_CHANNEL_NEUTRAL,       // YAW
-                FAILSAFE_CHANNEL_HOLD           // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // AUX1
+                FAILSAFE_CHANNEL_HOLD,          // AUX2
+                FAILSAFE_CHANNEL_HOLD,          // COLLECTIVE / AUX3
+                FAILSAFE_CHANNEL_HOLD           // GYRO_GAIN / AUX4  
             }
     },
 
@@ -114,7 +118,11 @@ static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
                 FAILSAFE_CHANNEL_NEUTRAL,       // ROLL
                 FAILSAFE_CHANNEL_NEUTRAL,       // PITCH
                 FAILSAFE_CHANNEL_NEUTRAL,       // YAW
-                FAILSAFE_CHANNEL_NEUTRAL        // THROTTLE
+                FAILSAFE_CHANNEL_NEUTRAL,       // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // AUX1
+                FAILSAFE_CHANNEL_HOLD,          // AUX2
+                FAILSAFE_CHANNEL_NEUTRAL,       // COLLECTIVE / AUX3
+                FAILSAFE_CHANNEL_NEUTRAL        // GYRO_GAIN / AUX4 
             }
     },
 
@@ -125,7 +133,11 @@ static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
                 FAILSAFE_CHANNEL_NEUTRAL,       // ROLL
                 FAILSAFE_CHANNEL_NEUTRAL,       // PITCH
                 FAILSAFE_CHANNEL_NEUTRAL,       // YAW
-                FAILSAFE_CHANNEL_HOLD           // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // AUX1
+                FAILSAFE_CHANNEL_HOLD,          // AUX2
+                FAILSAFE_CHANNEL_HOLD,          // COLLECTIVE / AUX3
+                FAILSAFE_CHANNEL_HOLD           // GYRO_GAIN / AUX4 
             }
     },
 
@@ -136,7 +148,11 @@ static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
                 FAILSAFE_CHANNEL_HOLD,          // ROLL
                 FAILSAFE_CHANNEL_HOLD,          // PITCH
                 FAILSAFE_CHANNEL_HOLD,          // YAW
-                FAILSAFE_CHANNEL_HOLD           // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // THROTTLE
+                FAILSAFE_CHANNEL_HOLD,          // AUX1
+                FAILSAFE_CHANNEL_HOLD,          // AUX2
+                FAILSAFE_CHANNEL_HOLD,          // COLLECTIVE / AUX3
+                FAILSAFE_CHANNEL_HOLD           // GYRO_GAIN / AUX4 
             }
     }
 };
@@ -158,10 +174,14 @@ void failsafeReset(void)
     failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;
     failsafeState.activeProcedure = failsafeConfig()->failsafe_procedure;
 
-    failsafeState.lastGoodRcCommand[ROLL] = 0;
+    failsafeState.lastGoodRcCommand[ROLL] = 0; //sibi!!
     failsafeState.lastGoodRcCommand[PITCH] = 0;
     failsafeState.lastGoodRcCommand[YAW] = 0;
     failsafeState.lastGoodRcCommand[THROTTLE] = 1000;
+    failsafeState.lastGoodRcCommand[AUX1] = 0;
+    failsafeState.lastGoodRcCommand[AUX2] = 0;
+    failsafeState.lastGoodRcCommand[COLLECTIVE] = 0;
+    failsafeState.lastGoodRcCommand[GYRO_GAIN] = 0;
 }
 
 void failsafeInit(void)
@@ -247,8 +267,8 @@ static void failsafeActivate(failsafePhase_e newPhase)
 
 void failsafeUpdateRcCommandValues(void)
 {
-    if (!failsafeState.active) {
-        for (int idx = 0; idx < 4; idx++) {
+    if (!failsafeState.active) { //!!sibi!!
+        for (int idx = 0; idx < 8; idx++) {
             failsafeState.lastGoodRcCommand[idx] = rcCommand[idx];
         }
     }
@@ -257,7 +277,7 @@ void failsafeUpdateRcCommandValues(void)
 void failsafeApplyControlInput(void)
 {
     // Apply channel values
-    for (int idx = 0; idx < 4; idx++) {
+    for (int idx = 0; idx < 8; idx++) { //sibi!!
         switch (failsafeProcedureLogic[failsafeState.activeProcedure].channelBehavior[idx]) {
             case FAILSAFE_CHANNEL_HOLD:
                 rcCommand[idx] = failsafeState.lastGoodRcCommand[idx];
@@ -270,9 +290,18 @@ void failsafeApplyControlInput(void)
                     case YAW:
                         rcCommand[idx] = 0;
                         break;
-
                     case THROTTLE:
                         rcCommand[idx] = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIDDLE : getThrottleIdleValue();
+                        break;
+                    case AUX1:
+                    case AUX2:
+                        rcCommand[idx] = PWM_RANGE_MIN;
+                        break;
+                    case GYRO_GAIN:
+                        rcCommand[idx] = PWM_RANGE_MIDDLE;
+                        break;
+                    case COLLECTIVE:
+                        rcCommand[idx] = PWM_RANGE_MIDDLE; //= 0 sibi!!?
                         break;
                 }
                 break;

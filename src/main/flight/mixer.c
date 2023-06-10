@@ -263,8 +263,12 @@ static uint16_t handleOutputScaling(
     }
     return value;
 }
-static void applyTurtleModeToMotors(void) {
-
+static void applyTurtleModeToMotors(void) { //no turtel for helicopters sibi!!
+#if defined(USE_VARIABLE_PITCH)
+    if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {
+        return
+    }
+#endif
     if (ARMING_FLAG(ARMED)) {
         const float flipPowerFactor = ((float)currentBatteryProfile->motor.turtleModePowerFactor)/100.0f;
         const float stickDeflectionPitchAbs = ABS(((float) rcCommand[PITCH]) / 500.0f);
@@ -461,7 +465,7 @@ static int getReversibleMotorsThrottleDeadband(void)
 void FAST_CODE mixTable()
 {
 #ifdef USE_DSHOT
-    if (FLIGHT_MODE(TURTLE_MODE)) {
+    if (FLIGHT_MODE(TURTLE_MODE)) { //no turtle for helicopters sibi!!
         applyTurtleModeToMotors();
         return;
     }

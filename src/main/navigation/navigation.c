@@ -2622,14 +2622,14 @@ void updateLandingStatus(void)
             disarm(DISARM_LANDING);
         } else if (!navigationIsFlyingAutonomousMode()) {
             // for multirotor only - reactivate landing detector without disarm when throttle raised toward hover throttle
-            landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
+            landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue())); //sibi!!
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
     }
 }
 
-bool isLandingDetected(void)
+bool isLandingDetected(void) //sibi!!
 {
     return STATE(AIRPLANE) ? isFixedWingLandingDetected() : isMulticopterLandingDetected();
 }
@@ -2691,7 +2691,7 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
     }
 }
 
-static void resetAltitudeController(bool useTerrainFollowing)
+static void resetAltitudeController(bool useTerrainFollowing) //sibi!!
 {
     // Set terrain following flag
     posControl.flags.isTerrainFollowEnabled = useTerrainFollowing;
@@ -2704,7 +2704,7 @@ static void resetAltitudeController(bool useTerrainFollowing)
     }
 }
 
-static void setupAltitudeController(void)
+static void setupAltitudeController(void) //sibi!!
 {
     if (STATE(FIXED_WING_LEGACY)) {
         setupFixedWingAltitudeController();
@@ -2714,7 +2714,7 @@ static void setupAltitudeController(void)
     }
 }
 
-static bool adjustAltitudeFromRCInput(void)
+static bool adjustAltitudeFromRCInput(void) //sibi!!
 {
     if (STATE(FIXED_WING_LEGACY)) {
         return adjustFixedWingAltitudeFromRCInput();
@@ -3259,7 +3259,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
         applyRoverBoatNavigationController(navStateFlags, currentTimeUs);
     } else if (STATE(FIXED_WING_LEGACY)) {
         applyFixedWingNavigationController(navStateFlags, currentTimeUs);
-    }
+    }  //else if (mixerConfig()->platformType == PLATFORM_HELICOPTER) { applyHelicopterNavigationController(navStateFlags, currentTimeUs); } //sibi!!
     else {
         applyMulticopterNavigationController(navStateFlags, currentTimeUs);
     }
