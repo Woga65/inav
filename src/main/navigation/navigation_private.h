@@ -327,7 +327,6 @@ typedef struct {
     int32_t                     course;
     int32_t                     previousCourse;
     timeMs_t                    lastCourseAdjustmentTime;
-    float                       multicopterSpeed;
 } navCruise_t;
 
 typedef struct {
@@ -457,7 +456,6 @@ bool isFlightDetected(void);
 bool isFixedWingFlying(void);
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
-flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state);
 
 void setHomePosition(const fpVector3_t * pos, int32_t heading, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask);
@@ -467,7 +465,7 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
 
 bool isNavHoldPositionActive(void);
 bool isLastMissionWaypoint(void);
-float getActiveSpeed(void);
+float getActiveWaypointSpeed(void);
 bool isWaypointNavTrackingActive(void);
 
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);

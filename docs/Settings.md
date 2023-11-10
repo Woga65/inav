@@ -1624,7 +1624,7 @@ Defines is UAV is capable of having flaps. If ON and AIRPLANE `platform_type` is
 
 ### hc_gov_pid_d
 
-_// TODO_
+D gain for the RPM governor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1634,7 +1634,7 @@ _// TODO_
 
 ### hc_gov_pid_i
 
-_// TODO_
+I gain for the RPM governor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1644,7 +1644,7 @@ _// TODO_
 
 ### hc_gov_pid_p
 
-_// TODO_
+P gain for the RPM governor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1654,7 +1654,7 @@ _// TODO_
 
 ### hc_governor_rpm_idleup_1
 
-_// TODO_
+The idle-up-1 mode target RPM for the motor that drives the main rotor(s). If a geared drive is used, this is the desired headspeed multiplied by the gear ratio.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1664,7 +1664,7 @@ _// TODO_
 
 ### hc_governor_rpm_idleup_2
 
-_// TODO_
+The idle-up-2 mode target RPM for the motor that drives the main rotor(s). If a geared drive is used, this is the desired headspeed multiplied by the gear ratio.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1674,7 +1674,7 @@ _// TODO_
 
 ### hc_governor_rpm_normal
 
-_// TODO_
+The normal mode target RPM for the motor that drives the main rotor(s). If a geared drive is used, this is the desired headspeed multiplied by the gear ratio.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -2752,16 +2752,6 @@ Speed in fully autonomous modes (RTH, WP) [cm/s]. Used for WP mode when no speci
 
 ---
 
-### nav_cruise_yaw_rate
-
-Max YAW rate when NAV COURSE HOLD/CRUISE mode is enabled. Set to 0 to disable on fixed wing (Note: On multirotor setting to 0 will disable Course Hold/Cruise mode completely) [dps]
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 20 | 0 | 120 |
-
----
-
 ### nav_disarm_on_landing
 
 If set to ON, INAV disarms the FC after landing
@@ -2849,6 +2839,16 @@ Cruise throttle in GPS assisted modes, this includes RTH. Should be set high eno
 | Default | Min | Max |
 | --- | --- | --- |
 | 1400 | 1000 | 2000 |
+
+---
+
+### nav_fw_cruise_yaw_rate
+
+Max YAW rate when NAV CRUISE mode is enabled (0=disable control via yaw stick) [dps]
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 20 | 0 | 60 |
 
 ---
 
@@ -4874,7 +4874,7 @@ Output function assignment mode. AUTO assigns outputs according to the default m
 
 ### pid_scaling_factor_d_pitch
 
-_// TODO_
+D gain pitch scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4884,7 +4884,7 @@ _// TODO_
 
 ### pid_scaling_factor_d_roll
 
-_// TODO_
+D gain roll scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4894,7 +4894,7 @@ _// TODO_
 
 ### pid_scaling_factor_d_yaw
 
-_// TODO_
+D gain yaw scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4904,7 +4904,7 @@ _// TODO_
 
 ### pid_scaling_factor_i_pitch
 
-_// TODO_
+I gain pitch scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4914,7 +4914,7 @@ _// TODO_
 
 ### pid_scaling_factor_i_roll
 
-_// TODO_
+I gain roll scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4924,7 +4924,7 @@ _// TODO_
 
 ### pid_scaling_factor_i_yaw
 
-_// TODO_
+I gain yaw scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4934,7 +4934,7 @@ _// TODO_
 
 ### pid_scaling_factor_p_pitch
 
-_// TODO_
+P gain pitch scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4944,7 +4944,7 @@ _// TODO_
 
 ### pid_scaling_factor_p_roll
 
-_// TODO_
+P gain roll scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4954,7 +4954,7 @@ _// TODO_
 
 ### pid_scaling_factor_p_yaw
 
-_// TODO_
+P gain yaw scaling factor
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -5058,7 +5058,7 @@ Selection of pitot hardware.
 
 | Default | Min | Max |
 | --- | --- | --- |
-| VIRTUAL |  |  |
+| NONE |  |  |
 
 ---
 

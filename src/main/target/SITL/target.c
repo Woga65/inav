@@ -51,7 +51,6 @@
 #include "drivers/timer.h"
 #include "drivers/serial.h"
 #include "config/config_streamer.h"
-#include "build/version.h"
 
 #include "target/SITL/sim/realFlight.h"
 #include "target/SITL/sim/xplane.h"
@@ -74,12 +73,9 @@ static int simPort = 0;
 
 static char **c_argv;
 
-static void printVersion(void) {
-    fprintf(stderr, "INAV %d.%d.%d SITL (%s)\n", FC_VERSION_MAJOR, FC_VERSION_MINOR, FC_VERSION_PATCH_LEVEL, shortGitRevision);
-}
-
 void systemInit(void) {
-    printVersion();
+
+    fprintf(stderr, "INAV %d.%d.%d SITL\n", FC_VERSION_MAJOR, FC_VERSION_MINOR, FC_VERSION_PATCH_LEVEL);
     clock_gettime(CLOCK_MONOTONIC, &start_time);
     fprintf(stderr, "[SYSTEM] Init...\n");
 
@@ -172,7 +168,6 @@ bool parseMapping(char* mapStr)
 
 void printCmdLineOptions(void)
 {
-    printVersion();
     fprintf(stderr, "Avaiable options:\n");
     fprintf(stderr, "--path=[path]                        Path and filename of eeprom.bin. If not specified 'eeprom.bin' in program directory is used.\n");
     fprintf(stderr, "--sim=[rf|xp]                        Simulator interface: rf = RealFligt, xp = XPlane. Example: --sim=rf\n");
@@ -202,7 +197,6 @@ void parseArguments(int argc, char *argv[])
             {"simport", required_argument, 0, 'p'},
             {"help", no_argument, 0, 'h'},
             {"path", required_argument, 0, 'e'},
-	    {"version", no_argument, 0, 'v'},
             {NULL, 0, NULL, 0}
         };
 
@@ -242,12 +236,10 @@ void parseArguments(int argc, char *argv[])
                     fprintf(stderr, "[EEPROM] Invalid path, using eeprom file in program directory\n.");
                 }
                 break;
-	    case 'v':
-		printVersion();
-		exit(0);
-	    default:
+            case 'h':
                 printCmdLineOptions();
                 exit(0);
+                break;
         }
     }
 

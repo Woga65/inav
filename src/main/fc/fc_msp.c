@@ -1524,38 +1524,12 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
             }
         break;
 
-    case MSP2_INAV_OUTPUT_MAPPING_EXT:
-        for (uint8_t i = 0; i < timerHardwareCount; ++i)
-            if (!(timerHardware[i].usageFlags & (TIM_USE_PPM | TIM_USE_PWM))) {
-                #if defined(SITL_BUILD)
-                sbufWriteU8(dst, i);
-                #else
-                sbufWriteU8(dst, timer2id(timerHardware[i].tim));
-                #endif
-                sbufWriteU8(dst, timerHardware[i].usageFlags);
-            }
-        break;
-
-    /* TODO: After changing configurator, remove the following two
-     * entries and expand MSP2_INAP_OUTPUT_MAPPING_EXT to 32 bits */
     case MSP2_INAV_OUTPUT_MAPPING_FULL:
         for (uint8_t i = 0; i < timerHardwareCount; ++i)
             if (!(timerHardware[i].usageFlags & (TIM_USE_PPM | TIM_USE_PWM))) {
                 sbufWriteU32(dst, timerHardware[i].usageFlags);     //woga65: send the full 32 bits of timer usage flags per timer
             }
-        break;
-
-    case MSP2_INAV_OUTPUT_MAPPING_FULL_EXT:
-        for (uint8_t i = 0; i < timerHardwareCount; ++i)
-            if (!(timerHardware[i].usageFlags & (TIM_USE_PPM | TIM_USE_PWM))) {
-                #if defined(SITL_BUILD)
-                sbufWriteU8(dst, i);
-                #else
-                sbufWriteU8(dst, timer2id(timerHardware[i].tim));
-                #endif
-                sbufWriteU32(dst, timerHardware[i].usageFlags);     //woga65: send the full 32 bits of timer usage flags per timer
-            }
-        break;
+        break;        
 
     case MSP2_INAV_MC_BRAKING:
 #ifdef USE_MR_BRAKING_MODE
@@ -3721,43 +3695,7 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
         *ret = MSP_RESULT_ACK;
         break;
 #endif
-#ifndef SITL_BUILD
-    case MSP2_INAV_TIMER_OUTPUT_MODE:
-        if (dataSize == 0) {
-            for (int i = 0; i < HARDWARE_TIMER_DEFINITION_COUNT; ++i) {
-                sbufWriteU8(dst, i);
-                sbufWriteU8(dst, timerOverrides(i)->outputMode);
-            }
-            *ret = MSP_RESULT_ACK;
-        } else if(dataSize == 1) {
-            uint8_t timer = sbufReadU8(src);
-            if(timer < HARDWARE_TIMER_DEFINITION_COUNT) {
-                sbufWriteU8(dst, timer);
-                sbufWriteU8(dst, timerOverrides(timer)->outputMode);
-                *ret = MSP_RESULT_ACK;
-            } else {
-                *ret = MSP_RESULT_ERROR;
-            }
-        } else {
-            *ret = MSP_RESULT_ERROR;
-        }
-        break;
-    case MSP2_INAV_SET_TIMER_OUTPUT_MODE:
-        if(dataSize == 2) {
-            uint8_t timer = sbufReadU8(src);
-            uint8_t outputMode = sbufReadU8(src);
-            if(timer < HARDWARE_TIMER_DEFINITION_COUNT) {
-                timerOverridesMutable(timer)->outputMode = outputMode;
-                *ret = MSP_RESULT_ACK;
-            } else {
-                *ret = MSP_RESULT_ERROR;
-            }
-        } else {
-            *ret = MSP_RESULT_ERROR;
-        }
-        break;
-#endif 
-    
+
     default:
         // Not handled
         return false;

@@ -927,10 +927,11 @@ float pidHeadingHold(float dT)
 {
     float headingHoldRate;
 
-    /* Convert absolute error into relative to current heading */
     int16_t error = DECIDEGREES_TO_DEGREES(attitude.values.yaw) - headingHoldTarget;
 
-    /* Convert absolute error into relative to current heading */
+    /*
+     * Convert absolute error into relative to current heading
+     */
     if (error > 180) {
         error -= 360;
     } else if (error < -180) {
