@@ -20,6 +20,11 @@
 #define TARGET_BOARD_IDENTIFIER "SP4W"
 #define USBD_PRODUCT_STRING  "SpeedyBee F405 Wing"
 
+//woga65: variable pitch?
+#if defined(SPEEDYBEEF405WING_VP) || defined(SPEEDYBEEF405WING_MOTORS_LAST_VP) || defined(SPEEDYBEEF405WING_4MOTORS_VP)
+ #define USE_VARIABLE_PITCH
+#endif
+
 // LEDs
 #define LED0                    PA14  //Blue
 #define LED1                    PA13  //Green
