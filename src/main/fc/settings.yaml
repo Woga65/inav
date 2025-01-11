@@ -4057,21 +4057,21 @@ groups:
         - name: hc_gov_pid_p
           description: "P gain for the RPM governor"        
           field: hc_gov_pid_P
-          default_value: 40
-          min: 2
+          default_value: 0.5
+          min: 0
           max: 255
           type: float
         - name: hc_gov_pid_i
           description: "I gain for the RPM governor"        
           field: hc_gov_pid_I
-          default_value: 20
-          min: 2
+          default_value: 0.25
+          min: 0
           max: 255
           type: float
         - name: hc_gov_pid_d
           description: "D gain for the RPM governor"        
           field: hc_gov_pid_D
-          default_value: 4
+          default_value: 0
           min: 0
           max: 255
           type: float

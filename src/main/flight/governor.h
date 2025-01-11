@@ -16,9 +16,9 @@ typedef struct govPid_s {
     /* Derivative low-pass filter time constant */
     float tau;
 
-    /* Output RPM limits */
-    float minRpm;
-    float maxRpm;
+    /* Output throttle limits */
+    float minThrottle;
+    float maxThrottle;
 
     /* Integrator limits */
     float minIterm;
@@ -34,7 +34,7 @@ typedef struct govPid_s {
     float prevRpm;
 
     /* Governor output */
-    float newRpm;
+    float newThrottle;
 
 } govPid_t;
 

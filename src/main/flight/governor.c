@@ -18,15 +18,15 @@
 #define GOV_SAMPLE_TIME_US   50000      // 50000us = 50ms corresponding to 20Hz
 #define GOV_TIME_CONSTANT_US 100000     // time constant tau 
 
-#define GOV_KP               30.000f    // 5.000f
-#define GOV_KI               15.000f    // 2.500f
-#define GOV_KD               3.000f     // 0.500f
-#define GOV_RPM_LIMIT_MIN    500.0f
-#define GOV_RPM_LIMIT_MAX    30500.0f
-#define GOV_ITERM_LIMIT      (GOV_RPM_LIMIT_MAX - GOV_RPM_LIMIT_MIN) * 0.5f     // 15000.0f
+#define GOV_KP               0.500      // 30.000f    // 5.000f
+#define GOV_KI               0.250      // 15.000f    // 2.500f
+#define GOV_KD               0.001      //  3.000f    // 0.500f
+#define GOV_THR_LIMIT_MIN    1000.0f
+#define GOV_THR_LIMIT_MAX    2000.0f
+#define GOV_ITERM_LIMIT      (GOV_THR_LIMIT_MAX - GOV_THR_LIMIT_MIN) * 0.5f     // 500.0f
 
 #define GOV_RPM_SETTLE_TIME  200000     // 200000us = 200ms time for the RPM to settle after throttle change
-#define GOV_RPM_CORRECTION   5.0f       // target RPM correction in percent (why????)
+#define GOV_RPM_CORRECTION   0.0f       // 5.0f       // target RPM correction in percent (why????)
 #define GOV_DELTA_THROTTLE   1
 
 #if defined(USE_ESC_SENSOR) && defined(USE_VARIABLE_PITCH)
@@ -47,13 +47,13 @@ static govPid_t govPid = {
     .Kd = GOV_KD,
     .minIterm = -GOV_ITERM_LIMIT,
     .maxIterm = +GOV_ITERM_LIMIT,
-    .minRpm = GOV_RPM_LIMIT_MIN, 
-    .maxRpm = GOV_RPM_LIMIT_MAX,
+    .minThrottle = GOV_THR_LIMIT_MIN, 
+    .maxThrottle = GOV_THR_LIMIT_MAX,
     .dTerm = 0.0f,
     .iTerm = 0.0f,
     .prevError = 0.0f,
     .prevRpm = 0.0f,
-    .newRpm = 0.0f,
+    .newThrottle = 0.0f,
     .T = GOV_SAMPLE_TIME_US * 0.000001f,       // in seconds
     .tau = GOV_TIME_CONSTANT_US * 0.000001f,
 };
@@ -64,7 +64,7 @@ static void governorInit(govPid_t *pid) {
     pid->dTerm = 0.0f;
     pid->prevError = 0.0f;
     pid->prevRpm = 0.0f;
-    pid->newRpm = 0.0f;
+    pid->newThrottle = 0.0f;
     pid->T = GOV_SAMPLE_TIME_US * 0.000001f;
     pid->tau =GOV_TIME_CONSTANT_US * 0.000001f;
     pid->Kp = helicopterConfig()->hc_gov_pid_P;
@@ -91,14 +91,14 @@ static float applyGovernorPidController(govPid_t *pid, float targetRpm, float cu
                 /  (2.0f * pid->tau + pid->T);
 
     /* Compute output + apply limits */
-    pid->newRpm = constrainf(pTerm + pid->iTerm + pid->dTerm, pid->minRpm, pid->maxRpm);
+    pid->newThrottle = constrainf(pTerm + pid->iTerm + pid->dTerm, pid->minThrottle, pid->maxThrottle);
 
     /* Store current state for later use */
     pid->prevError = error;
     pid->prevRpm = currentRpm;
 
     /* Return result */
-    return pid->newRpm;
+    return pid->newThrottle;
 }
 
 
@@ -174,18 +174,19 @@ uint16_t governorApply(uint16_t throttle) {
             targetRpm += (targetRpm * GOV_RPM_CORRECTION * 0.01f);
         }
 
-        float newRpm = applyGovernorPidController(pid, targetRpm, averageRpm);
+        float newThrottle = applyGovernorPidController(pid, targetRpm, averageRpm);
         rpmSamples = 0;
         sampleCount = 0;
         deltaTime = microsISR() + GOV_SAMPLE_TIME_US;
     
         /* Calculate new throttle */
-        if(newRpm > averageRpm) {
+        /*if(newThrottle > averageRpm) {
             governorThrottle += GOV_DELTA_THROTTLE;
-        } else if (newRpm < averageRpm) {
+        } else if (newThrottle < averageRpm) {
             governorThrottle -= GOV_DELTA_THROTTLE;
         }
-        governorThrottle = constrain(governorThrottle, 1050, 1950);
+        governorThrottle = constrain(governorThrottle, 1050, 1950);*/
+        governorThrottle = constrain(newThrottle, 1050, 1950);
     }
 
     return governorThrottle;
