@@ -291,10 +291,11 @@ static void applyHelicopterAltitudeController(timeUs_t currentTimeUs)
 
 bool isHelicopterFlying(void)
 {
-    bool collectiveCondition = rcCommand[COLLECTIVE] > getHoverCollectivePitch();
-    bool gyroCondition = averageAbsGyroRates() > 7.0f;
+    //bool collectiveCondition = rcCommand[COLLECTIVE] > getHoverCollectivePitch();
+    //bool gyroCondition = averageAbsGyroRates() > 7.0f;
 
-    return collectiveCondition && gyroCondition;
+    //return collectiveCondition && gyroCondition;
+    return isHelicopterFlyingUpright() || isHelicopterFlyingInverted();
 }
 
 bool isHelicopterFlyingUpright(void)
