@@ -171,8 +171,7 @@ void setupMulticopterAltitudeController(void)
     }
     else {
         // If throttle status is THROTTLE_LOW - use Thr Mid anyway
-//      if (throttleStatus == THROTTLE_LOW || throttleStatus == COLLECTIVE_MID) { //sibi
-        if (throttleStatus != THROTTLE_HIGH) { //sibi
+        if (throttleStatus == THROTTLE_LOW) {
             altHoldThrottleRCZero = rcLookupThrottleMid();
         }
         else {

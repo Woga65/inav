@@ -103,30 +103,18 @@ bool areSticksDeflectedMoreThanPosHoldDeadband(void)
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
     int value;
-    int auxValue; //sibi
-    const uint16_t collectiveThrottleChannel = mixerConfig()->auxThrottleChannel + NON_AUX_CHANNEL_COUNT -1; //sibi
     if (type == THROTTLE_STATUS_TYPE_RC) {
         value = rxGetChannelValue(THROTTLE);
-        auxValue = rxGetChannelValue(collectiveThrottleChannel); //sibi
     } else {
         value = rcCommand[THROTTLE];
-        auxValue = rxGetChannelValue(collectiveThrottleChannel); //sibi
     }
 
     const uint16_t mid_throttle_deadband = rcControlsConfig()->mid_throttle_deadband;
     if (feature(FEATURE_REVERSIBLE_MOTORS) && value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband)) { //sibi
         return THROTTLE_LOW;
     }
-    if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck) && !mixerConfig()->auxThrottleChannel) { //sibi
+    if (!feature(FEATURE_REVERSIBLE_MOTORS) && value < rxConfig()->mincheck) {
         return THROTTLE_LOW;
-    }
-    if (!feature(FEATURE_REVERSIBLE_MOTORS) && mixerConfig()->auxThrottleChannel && auxValue < (PWM_RANGE_MIN + 1)) { //sibi
-        return THROTTLE_LOW;
-//      return COLLECTIVE_MID;
-    }
-//  *** TESTING: Differentiate between collective stick centered with the motores stopped and stick centered while the motors are running.
-    if (!feature(FEATURE_REVERSIBLE_MOTORS) && mixerConfig()->auxThrottleChannel && value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband)) { //sibi
-        return COLLECTIVE_MID;   
     }
 
     return THROTTLE_HIGH;
