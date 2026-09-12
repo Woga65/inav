@@ -264,6 +264,12 @@ void servoMixer(float dT)
         (mixerConfig()->platformType == PLATFORM_MULTIROTOR || mixerConfig()->platformType == PLATFORM_TRICOPTER)) {
             input[INPUT_STABILIZED_YAW] *= -1;
         }
+
+#if defined(USE_VARIABLE_PITCH)                                         
+        if (mixerConfig()->platformType == PLATFORM_HELICOPTER) {       // Woga65: Reverse yaw on helicopters to be
+            input[INPUT_STABILIZED_YAW] *= -1;                          // consistent with the motor mixer's behavior
+        }                                                               // rather than with an airplane rudder.
+#endif
     }
 
     input[INPUT_STABILIZED_ROLL_PLUS] = constrain(input[INPUT_STABILIZED_ROLL], 0, 1000);
